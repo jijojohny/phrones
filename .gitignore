@@ -1,34 +1,74 @@
 # Documentation
 *.md
 
-# Secrets — never commit
-.env
-.env.local
-.env.*.local
-tools/0g-storage-ts-starter-kit/.env
+# =============================================================================
+# Secrets & credentials — NEVER commit
+# =============================================================================
 
-# Wallets
+# Environment files (keep .env.example as the template)
+.env
+.env.*
+!.env.example
+
+# Wallet / key material
+wallets/
 wallets.json
 **/wallets.json
+*.key
+*.pem
+*.p12
+*.keystore
+**/keystore/**
+mnemonic.txt
+**/mnemonic*.txt
+**/private_key*
+**/id_rsa*
+**/id_ed25519*
 
-# Vendored / cloned tooling (clone locally via SETUP-STEP1.md)
+# API / service credentials
+credentials.json
+**/credentials.json
+secrets.json
+**/secrets.json
+*.secret
+*.credentials
+service-account*.json
+**/service-account*.json
+
+# Polymarket / exchange API exports
+**/polymarket*creds*
+**/*api-secret*
+
+# Deployment state (may contain addresses tied to funded wallets)
+.deployments.json
+deployments.local.json
+
+# Foundry broadcast & cache (tx metadata; cache may store private keys)
+broadcast/
+cache/
+out/
+lib/
+
+# Vendored / cloned tooling (has its own .env)
 tools/0g-storage-ts-starter-kit/
 
-# Dependencies
+# =============================================================================
+# Dependencies & build
+# =============================================================================
+
 node_modules/
 tools/**/node_modules/
-
-# Build
 dist/
 build/
-out/
-cache/
 foundry/cache/
 foundry/out/
 
-# Logs
+# Logs & temp (setup scripts may echo sensitive data)
 *.log
 logs/
+tmp/
+*.bak
+.env.bak.*
 
 # OS / IDE
 .DS_Store
@@ -36,6 +76,8 @@ logs/
 .vscode/
 *.swp
 
-# Foundry
-broadcast/
+# Foundry lock (optional local pin)
+foundry.lock
+
+# Keep empty broadcast folder placeholder if needed
 !/broadcast/.gitkeep

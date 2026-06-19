@@ -6,11 +6,24 @@
   "engines": {
     "node": ">=22"
   },
+  "pnpm": {
+    "overrides": {
+      "ethers": "6.13.1"
+    }
+  },
   "scripts": {
     "setup:verify": "bash scripts/setup/verify-step1.sh",
     "setup:wallets": "bash scripts/setup/generate-wallets.sh",
     "setup:sync-storage": "bash scripts/setup/sync-storage-env.sh",
     "setup:storage-smoke": "bash scripts/setup/run-storage-smoke.sh",
-    "setup:balance": "bash scripts/setup/check-balance.sh"
+    "setup:balance": "bash scripts/setup/check-balance.sh",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "phase0:deploy": "bash scripts/phase0/deploy-registry.sh",
+    "phase0:markets": "pnpm --filter @phronesis/ingestion markets",
+    "phase0:feed": "pnpm --filter @phronesis/ingestion start -- --duration=30 --markets=10",
+    "phase0:audit": "pnpm --filter @phronesis/audit anchor",
+    "phase0:compute": "bash scripts/phase0/smoke-compute.sh",
+    "phase0:all": "pnpm phase0:deploy && pnpm phase0:feed && pnpm phase0:audit"
   }
 }
