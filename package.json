@@ -1,0 +1,16 @@
+{
+  "name": "phronesis",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Autonomous on-chain prediction-market fund on 0G deAIOS",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup:verify": "bash scripts/setup/verify-step1.sh",
+    "setup:wallets": "bash scripts/setup/generate-wallets.sh",
+    "setup:sync-storage": "bash scripts/setup/sync-storage-env.sh",
+    "setup:storage-smoke": "bash scripts/setup/run-storage-smoke.sh",
+    "setup:balance": "bash scripts/setup/check-balance.sh"
+  }
+}
