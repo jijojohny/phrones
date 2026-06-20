@@ -14,6 +14,11 @@
   "scripts": {
     "setup:verify": "bash scripts/setup/verify-step1.sh",
     "setup:wallets": "bash scripts/setup/generate-wallets.sh",
+    "setup:faucet-wallets": "bash scripts/setup/generate-faucet-wallets.sh",
+    "setup:faucet-balances": "bash scripts/setup/check-faucet-balances.sh",
+    "setup:faucet-addresses": "bash scripts/setup/print-faucet-addresses.sh",
+    "setup:faucet-consolidate": "bash scripts/setup/consolidate-faucet-0g.sh",
+    "setup:faucet-consolidate:dry": "bash scripts/setup/consolidate-faucet-0g.sh --dry-run",
     "setup:sync-storage": "bash scripts/setup/sync-storage-env.sh",
     "setup:storage-smoke": "bash scripts/setup/run-storage-smoke.sh",
     "setup:balance": "bash scripts/setup/check-balance.sh",
@@ -24,6 +29,10 @@
     "phase0:feed": "pnpm --filter @phronesis/ingestion start -- --duration=30 --markets=10",
     "phase0:audit": "pnpm --filter @phronesis/audit anchor",
     "phase0:compute": "bash scripts/phase0/smoke-compute.sh",
-    "phase0:all": "pnpm phase0:deploy && pnpm phase0:feed && pnpm phase0:audit"
+    "phase0:all": "pnpm phase0:deploy && pnpm phase0:feed && pnpm phase0:audit",
+    "phase1:state": "pnpm --filter @phronesis/ingestion phase1 -- --duration=120 --markets=50",
+    "phase1:fixture": "pnpm --filter @phronesis/ingestion phase1 -- --fixture --sentiment-only --markets=50",
+    "phase1:sentiment": "pnpm --filter @phronesis/ingestion phase1 -- --sentiment-only --markets=50",
+    "phase1:x402": "pnpm --filter @phronesis/ingestion phase1 -- --x402-demo --fixture --sentiment-only --markets=5"
   }
 }

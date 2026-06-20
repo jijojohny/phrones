@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  ethers: 6.13.1
+
 importers:
 
   .: {}
@@ -35,6 +38,9 @@ importers:
       '@phronesis/shared':
         specifier: workspace:*
         version: link:../shared
+      '@phronesis/x402-client':
+        specifier: workspace:*
+        version: link:../x402-client
       ws:
         specifier: ^8.18.0
         version: 8.21.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -57,6 +63,15 @@ importers:
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/x402-client:
     devDependencies:
       '@types/node':
         specifier: ^22.10.0

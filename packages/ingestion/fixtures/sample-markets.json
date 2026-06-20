@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fixture-1",
+    "question": "Will Bitcoin reach $150k before July 2026?",
+    "conditionId": "0xfixture001",
+    "slug": "btc-150k-july-2026",
+    "tokenIds": ["100001", "100002"],
+    "outcomes": ["Yes", "No"],
+    "prices": [0.42, 0.58],
+    "volume24hr": 250000,
+    "endDate": 1782864000000,
+    "tags": ["crypto"]
+  },
+  {
+    "id": "fixture-2",
+    "question": "Will the Fed cut rates in March 2026?",
+    "conditionId": "0xfixture002",
+    "slug": "fed-cut-march-2026",
+    "tokenIds": ["200001", "200002"],
+    "outcomes": ["Yes", "No"],
+    "prices": [0.65, 0.35],
+    "volume24hr": 180000,
+    "endDate": 1775001600000,
+    "tags": ["macro"]
+  },
+  {
+    "id": "fixture-3",
+    "question": "Will Trump win the 2028 Republican nomination?",
+    "conditionId": "0xfixture003",
+    "slug": "trump-gop-2028",
+    "tokenIds": ["300001", "300002"],
+    "outcomes": ["Yes", "No"],
+    "prices": [0.71, 0.29],
+    "volume24hr": 95000,
+    "endDate": 1853280000000,
+    "tags": ["politics"]
+  }
+]

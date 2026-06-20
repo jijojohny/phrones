@@ -29,6 +29,15 @@ export const env = {
   memoriaRegistryAddress: optional("MEMORIA_REGISTRY_ADDRESS"),
   polymarketClobHost: optional("POLYMARKET_CLOB_HOST", "https://clob.polymarket.com"),
   polygonRpcUrl: optional("POLYGON_RPC_URL", "https://polygon-rpc.com"),
+  bitqueryApiKey: optional("BITQUERY_API_KEY"),
+  cryptopanicApiKey: optional("CRYPTOPANIC_API_KEY"),
+  newsApiKey: optional("NEWS_API_KEY"),
+  redisUrl: optional("REDIS_URL"),
+  x402FacilitatorUrl: optional("X402_FACILITATOR_URL"),
+  divergenceThreshold: Number(optional("DIVERGENCE_THRESHOLD", "0.08")),
+  sentimentAlpha: Number(optional("SENTIMENT_ALPHA", "0.15")),
+  minLiquidityUsd: Number(optional("MIN_LIQUIDITY_USD", "10000")),
+  minTimeToExpirySec: Number(optional("MIN_TIME_TO_EXPIRY_SEC", "86400")),
 };
 
 export function requireDeployerKey(): string {

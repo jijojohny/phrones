@@ -1,5 +1,7 @@
 const GAMMA_API = "https://gamma-api.polymarket.com/markets";
 
+import { fetchWithRetry } from "../util/fetch-retry.js";
+
 export interface GammaMarket {
   id: string;
   question: string;
@@ -9,6 +11,8 @@ export interface GammaMarket {
   outcomePrices: string;
   outcomes: string;
   volume24hr?: number;
+  endDate?: string;
+  tags?: Array<{ slug: string; label?: string }>;
   acceptingOrders?: boolean;
   enableOrderBook?: boolean;
   closed?: boolean;
@@ -22,6 +26,9 @@ export interface ActiveMarket {
   tokenIds: string[];
   outcomes: string[];
   prices: number[];
+  volume24hr: number;
+  endDate?: number;
+  tags: string[];
 }
 
 function parseJsonArray<T>(raw: string): T[] {
@@ -39,7 +46,7 @@ export async function fetchActiveMarkets(limit = 50): Promise<ActiveMarket[]> {
   url.searchParams.set("closed", "false");
   url.searchParams.set("enableOrderBook", "true");
 
-  const res = await fetch(url);
+  const res = await fetchWithRetry(url);
   if (!res.ok) {
     throw new Error(`Gamma API error: ${res.status} ${res.statusText}`);
   }
@@ -48,16 +55,24 @@ export async function fetchActiveMarkets(limit = 50): Promise<ActiveMarket[]> {
 
   return rows
     .filter((m) => m.acceptingOrders !== false && m.enableOrderBook !== false)
-    .map((m) => ({
-      id: m.id,
-      question: m.question,
-      conditionId: m.conditionId,
-      slug: m.slug,
-      tokenIds: parseJsonArray<string>(m.clobTokenIds),
-      outcomes: parseJsonArray<string>(m.outcomes),
-      prices: parseJsonArray<string>(m.outcomePrices).map(Number),
-    }))
+    .map(mapGammaMarket)
     .filter((m) => m.tokenIds.length > 0);
+}
+
+function mapGammaMarket(m: GammaMarket): ActiveMarket {
+  const endMs = m.endDate ? Date.parse(m.endDate) : undefined;
+  return {
+    id: m.id,
+    question: m.question,
+    conditionId: m.conditionId,
+    slug: m.slug,
+    tokenIds: parseJsonArray<string>(m.clobTokenIds),
+    outcomes: parseJsonArray<string>(m.outcomes),
+    prices: parseJsonArray<string>(m.outcomePrices).map(Number),
+    volume24hr: m.volume24hr ?? 0,
+    endDate: Number.isFinite(endMs) ? endMs : undefined,
+    tags: (m.tags ?? []).map((t) => t.slug ?? t.label ?? "").filter(Boolean),
+  };
 }
 
 export async function fetchTopMarkets(count = 10): Promise<ActiveMarket[]> {
@@ -69,7 +84,7 @@ export async function fetchTopMarkets(count = 10): Promise<ActiveMarket[]> {
   url.searchParams.set("order", "volume24hr");
   url.searchParams.set("ascending", "false");
 
-  const res = await fetch(url);
+  const res = await fetchWithRetry(url);
   if (!res.ok) {
     throw new Error(`Gamma API error: ${res.status}`);
   }
@@ -79,15 +94,7 @@ export async function fetchTopMarkets(count = 10): Promise<ActiveMarket[]> {
   return rows
     .filter((m) => m.acceptingOrders !== false)
     .slice(0, count)
-    .map((m) => ({
-      id: m.id,
-      question: m.question,
-      conditionId: m.conditionId,
-      slug: m.slug,
-      tokenIds: parseJsonArray<string>(m.clobTokenIds),
-      outcomes: parseJsonArray<string>(m.outcomes),
-      prices: parseJsonArray<string>(m.outcomePrices).map(Number),
-    }))
+    .map(mapGammaMarket)
     .filter((m) => m.tokenIds.length > 0);
 }
 

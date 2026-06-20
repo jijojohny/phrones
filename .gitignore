@@ -1,4 +1,4 @@
-# Documentation
+# Documentation (local plans — keep .env.example tracked)
 *.md
 
 # =============================================================================
@@ -14,6 +14,9 @@
 wallets/
 wallets.json
 **/wallets.json
+**/accounts.json
+**/addresses.json
+**/addresses.txt
 *.key
 *.pem
 *.p12
@@ -22,6 +25,8 @@ wallets.json
 mnemonic.txt
 **/mnemonic*.txt
 **/private_key*
+**/seed.txt
+**/recovery*.txt
 **/id_rsa*
 **/id_ed25519*
 
@@ -39,45 +44,103 @@ service-account*.json
 **/polymarket*creds*
 **/*api-secret*
 
+# TEE / 0G Compute artifacts (may contain enclave keys or attestation quotes)
+broker_attestation_report.json
+**/*attestation*report*.json
+**/attestation*.json
+**/inference-secret*
+**/compute-ledger*
+
 # Deployment state (may contain addresses tied to funded wallets)
 .deployments.json
 deployments.local.json
+deployments/
 
 # Foundry broadcast & cache (tx metadata; cache may store private keys)
 broadcast/
 cache/
 out/
-lib/
+foundry/cache/
+foundry/out/
 
-# Vendored / cloned tooling (has its own .env)
-tools/0g-storage-ts-starter-kit/
+# Foundry libs are vendored via git submodule — do not commit ad-hoc copies
+lib/*
+!lib/forge-std/
+
+# Cloned / local tooling (has its own .env and node_modules)
+tools/
 
 # =============================================================================
 # Dependencies & build
 # =============================================================================
 
 node_modules/
-tools/**/node_modules/
+**/node_modules/
 dist/
 build/
-foundry/cache/
-foundry/out/
+*.tsbuildinfo
+.turbo/
 
+# pnpm (this repo uses pnpm — ignore npm/yarn lockfiles)
+.pnpm-store/
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+npm-shrinkwrap.json
+
+# =============================================================================
+# Local data, audit blobs, exports
+# =============================================================================
+
+data/
+exports/
+audit-blobs/
+storage-uploads/
+merkle-dumps/
+*.parquet
+*.csv.local
+
+# =============================================================================
 # Logs & temp (setup scripts may echo sensitive data)
+# =============================================================================
+
 *.log
 logs/
 tmp/
+temp/
 *.bak
+*.tmp
+*.swp
+*.swo
+*~
 .env.bak.*
 
-# OS / IDE
+# =============================================================================
+# Test & coverage
+# =============================================================================
+
+coverage/
+.nyc_output/
+**/__snapshots__/*.received.*
+
+# =============================================================================
+# OS / IDE / editor
+# =============================================================================
+
 .DS_Store
+Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
-*.swp
+.cursor/
+*.code-workspace
+
+# =============================================================================
+# Docker / infra local overrides
+# =============================================================================
+
+docker-compose.override.yml
+dump.rdb
 
 # Foundry lock (optional local pin)
 foundry.lock
-
-# Keep empty broadcast folder placeholder if needed
-!/broadcast/.gitkeep

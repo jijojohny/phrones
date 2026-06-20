@@ -7,10 +7,12 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "tsx src/cli.ts",
-    "markets": "tsx src/cli.ts --markets-only"
+    "markets": "tsx src/cli.ts --markets-only",
+    "phase1": "tsx src/phase1-cli.ts"
   },
   "dependencies": {
     "@phronesis/shared": "workspace:*",
+    "@phronesis/x402-client": "workspace:*",
     "ws": "^8.18.0"
   },
   "devDependencies": {
