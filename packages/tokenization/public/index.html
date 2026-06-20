@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phronesis Investor Portal</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #141b24;
+      --text: #e8eef5;
+      --muted: #8fa3b8;
+      --accent: #3dd68c;
+      --border: #243041;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { margin: 0; font-size: 1.4rem; }
+    p.sub { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    main { max-width: 960px; margin: 0 auto; padding: 2rem; display: grid; gap: 1rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+    input {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0e141c;
+      color: var(--text);
+    }
+    button {
+      margin-top: 0.75rem;
+      padding: 0.65rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #052012;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+    .metric { background: #0e141c; border-radius: 8px; padding: 0.75rem; }
+    .metric span { display: block; color: var(--muted); font-size: 0.75rem; }
+    .metric strong { font-size: 1.1rem; }
+    pre {
+      background: #0e141c;
+      border-radius: 8px;
+      padding: 0.75rem;
+      overflow: auto;
+      font-size: 0.8rem;
+      color: #b8c9dc;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Phronesis Investor Portal</h1>
+    <p class="sub">ERC-7857 fractional fund — read-only performance via sealed executor</p>
+  </header>
+  <main>
+    <section class="card">
+      <label for="investor">Your wallet address</label>
+      <input id="investor" placeholder="0x..." />
+      <button id="loadBtn">Load performance</button>
+      <p id="status" class="sub" style="margin-top:0.75rem"></p>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;font-size:1rem">Fund metrics</h2>
+      <div class="grid" id="metrics">
+        <div class="metric"><span>NAV</span><strong id="nav">—</strong></div>
+        <div class="metric"><span>30d return</span><strong id="pnl30d">—</strong></div>
+        <div class="metric"><span>Sharpe</span><strong id="sharpe">—</strong></div>
+        <div class="metric"><span>Max DD</span><strong id="maxDd">—</strong></div>
+        <div class="metric"><span>Trades</span><strong id="trades">—</strong></div>
+        <div class="metric"><span>Audit root</span><strong id="audit" style="font-size:0.75rem">—</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0;font-size:1rem">On-chain links</h2>
+      <pre id="links">Loading config…</pre>
+    </section>
+  </main>
+  <script>
+    let cfg = {};
+    fetch('/config.json').then(r => r.json()).then(c => {
+      cfg = c;
+      document.getElementById('links').textContent = [
+        `Fund:     ${c.fundAddress || '(not deployed)'}`,
+        `Share:    ${c.shareAddress || '(not deployed)'}`,
+        `Registry: ${c.memoriaRegistry || '(not deployed)'}`,
+        `Executor: ${c.executorUrl}`,
+      ].join('\n');
+    });
+
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      const investor = document.getElementById('investor').value.trim();
+      const status = document.getElementById('status');
+      if (!investor.startsWith('0x')) {
+        status.textContent = 'Enter a valid address';
+        return;
+      }
+      status.textContent = 'Fetching…';
+      try {
+        const base = cfg.executorUrl || 'http://localhost:8787';
+        const res = await fetch(`${base}/performance?investor=${encodeURIComponent(investor)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        document.getElementById('nav').textContent = '$' + data.nav.toFixed(2);
+        document.getElementById('pnl30d').textContent = (data.pnl30d * 100).toFixed(2) + '%';
+        document.getElementById('sharpe').textContent = data.sharpe.toFixed(2);
+        document.getElementById('maxDd').textContent = (data.maxDrawdown * 100).toFixed(1) + '%';
+        document.getElementById('trades').textContent = String(data.tradeCount);
+        document.getElementById('audit').textContent = (data.lastAuditRoot || '—').slice(0, 14) + '…';
+        status.textContent = 'Authorized — performance loaded';
+      } catch (e) {
+        status.textContent = e.message || 'Failed to load';
+      }
+    });
+  </script>
+</body>
+</html>

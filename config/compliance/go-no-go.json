@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "title": "Phronesis Go/No-Go Compliance Memo",
+  "jurisdiction": "UNSET",
+  "items": [
+    { "id": "legal_review", "label": "Legal counsel reviewed prediction-market exposure", "status": "pending", "required": true },
+    { "id": "geo_fencing", "label": "Investor geo-fencing policy defined", "status": "pending", "required": true },
+    { "id": "accredited_gate", "label": "Accredited investor gate decision documented", "status": "pending", "required": false },
+    { "id": "tos_privacy", "label": "Terms of service + privacy policy published", "status": "pending", "required": true },
+    { "id": "smart_contract_audit", "label": "Third-party smart contract audit complete", "status": "pending", "required": true },
+    { "id": "incident_response", "label": "Incident response runbook ready", "status": "pending", "required": true },
+    { "id": "key_ceremony", "label": "TEE/HSM key ceremony documented", "status": "pending", "required": true }
+  ]
+}

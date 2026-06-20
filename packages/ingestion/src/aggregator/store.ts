@@ -1,10 +1,11 @@
 import type { ActiveMarket } from "../polymarket/markets.js";
-import type { MarketEntry, MarketState, MarketTick, SentimentSignal } from "@phronesis/shared";
+import type { MarketEntry, MarketState, MarketTick, SentimentSignal, VaultMetrics } from "@phronesis/shared";
 import { sentimentImpliedP } from "../anomaly/divergence.js";
 
 export class MarketStateStore {
   private readonly markets = new Map<string, MarketEntry>();
   private readonly assetToCondition = new Map<string, string>();
+  private vaults: VaultMetrics[] = [];
   private version = 0;
   private readonly alpha: number;
 
@@ -68,6 +69,11 @@ export class MarketStateStore {
     return true;
   }
 
+  setVaults(vaults: VaultMetrics[]): void {
+    this.vaults = vaults;
+    this.version += 1;
+  }
+
   applySentiment(signals: SentimentSignal[]): void {
     const byCondition = new Map<string, SentimentSignal[]>();
     for (const s of signals) {
@@ -109,6 +115,7 @@ export class MarketStateStore {
       markets: [...this.markets.values()].sort(
         (a, b) => Math.abs(b.divergence) - Math.abs(a.divergence),
       ),
+      vaults: this.vaults.length > 0 ? this.vaults : undefined,
     };
   }
 

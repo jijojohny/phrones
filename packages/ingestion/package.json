@@ -3,16 +3,22 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    "./vaults": "./src/vaults/index.ts"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "tsx src/cli.ts",
     "markets": "tsx src/cli.ts --markets-only",
-    "phase1": "tsx src/phase1-cli.ts"
+    "phase1": "tsx src/phase1-cli.ts",
+    "ha-feed": "tsx src/ha-feed-cli.ts",
+    "vaults": "tsx src/vaults-cli.ts"
   },
   "dependencies": {
     "@phronesis/shared": "workspace:*",
     "@phronesis/x402-client": "workspace:*",
+    "ethers": "6.13.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {

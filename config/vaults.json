@@ -1,0 +1,25 @@
+{
+  "vaults": [
+    {
+      "protocol": "erc4626",
+      "vaultAddress": "0x0000000000000000000000000000000000000001",
+      "chainId": 137,
+      "label": "Polygon yield vault (placeholder)",
+      "strategyExposure": { "stable-yield": 0.6, "prediction-markets": 0.4 }
+    },
+    {
+      "protocol": "polymarket-lp",
+      "vaultAddress": "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E",
+      "chainId": 137,
+      "label": "Polymarket CTF Exchange LP proxy",
+      "strategyExposure": { "prediction-markets": 1.0 }
+    },
+    {
+      "protocol": "underlay",
+      "vaultAddress": "0x0000000000000000000000000000000000000002",
+      "chainId": 16602,
+      "label": "0G Underlay risk vault (config-driven)",
+      "strategyExposure": { "risk-parity": 0.4, "prediction-alpha": 0.35, "cash": 0.25 }
+    }
+  ]
+}

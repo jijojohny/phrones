@@ -1,0 +1,29 @@
+{
+  "name": "@phronesis/execution",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./polymarket/order-builder": "./src/polymarket/order-builder.ts",
+    "./polymarket/executor": "./src/polymarket/executor.ts",
+    "./relayer/pipeline": "./src/relayer/pipeline.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/policy/validator.test.ts",
+    "start": "tsx src/cli.ts",
+    "rotate-session": "tsx src/session/rotate-cli.ts"
+  },
+  "dependencies": {
+    "@phronesis/audit": "workspace:*",
+    "@phronesis/shared": "workspace:*",
+    "@phronesis/tee-core": "workspace:*",
+    "ethers": "6.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

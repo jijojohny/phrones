@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "title": "Phronesis Production Launch Checklist",
+  "checks": [
+    { "id": "env_deployer", "label": "DEPLOYER_PRIVATE_KEY_TESTNET set", "required": true },
+    { "id": "env_fund", "label": "PHRONESIS_FUND_ADDRESS deployed", "required": true },
+    { "id": "env_registry", "label": "MEMORIA_REGISTRY_ADDRESS deployed", "required": true },
+    { "id": "env_compute", "label": "OG_COMPUTE_PROVIDER configured", "required": false },
+    { "id": "forge_tests", "label": "All forge tests pass", "required": true },
+    { "id": "package_build", "label": "pnpm build succeeds", "required": true },
+    { "id": "deployer_balance", "label": "Deployer balance >= 0.1 0G", "required": true },
+    { "id": "session_policy", "label": "Session policy not expired", "required": false },
+    { "id": "cognitive_p99", "label": "Cognitive cycle p99 < 5000ms", "required": true },
+    { "id": "audit_anchor", "label": "MemoriaRegistry has anchored root", "required": false }
+  ]
+}

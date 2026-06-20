@@ -3,6 +3,20 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    "./pipeline": {
+      "types": "./dist/pipeline/cognitive.d.ts",
+      "import": "./dist/pipeline/cognitive.js"
+    },
+    "./strategy": {
+      "types": "./dist/strategy/loader.d.ts",
+      "import": "./dist/strategy/loader.js"
+    },
+    "./audit": {
+      "types": "./dist/audit/redacted.d.ts",
+      "import": "./dist/audit/redacted.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

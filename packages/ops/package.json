@@ -1,0 +1,24 @@
+{
+  "name": "@phronesis/ops",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/cli.ts",
+    "preflight": "tsx src/cli.ts preflight",
+    "load-test": "tsx src/cli.ts load-test",
+    "health": "tsx src/cli.ts health"
+  },
+  "dependencies": {
+    "@phronesis/shared": "workspace:*",
+    "@phronesis/tee-core": "workspace:*",
+    "ethers": "6.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

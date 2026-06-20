@@ -39,11 +39,26 @@ export interface MarketEntry {
   updatedAt: number;
 }
 
+/** Vault metrics from ERC-4626 / Polymarket LP / Underlay adapters. */
+export interface VaultMetrics {
+  protocol: string;
+  vaultAddress: string;
+  chainId: number;
+  totalAssets: string;
+  totalSupply: string;
+  sharePrice: number;
+  utilization: number;
+  openInterest?: string;
+  strategyExposure: Record<string, number>;
+  lastUpdated: number;
+}
+
 /** Snapshot published by the data-plane aggregator. */
 export interface MarketState {
   version: number;
   ts: number;
   markets: MarketEntry[];
+  vaults?: VaultMetrics[];
 }
 
 export interface SentimentSignal {
@@ -183,4 +198,162 @@ export interface BacktestReport {
 export interface BacktestDay {
   ts: number;
   prices: Record<string, number>;
+}
+
+/** ERC-4337 / session key policy mirror (off-chain + on-chain hooks). */
+export interface SessionKeyPolicy {
+  validUntil: number;
+  dailyLimitUsdc: number;
+  perTxLimitUsdc: number;
+  allowedContracts: string[];
+  allowedSelectors: string[];
+  maxNavUsdc: number;
+}
+
+export interface PolymarketOrder {
+  tokenId: string;
+  conditionId: string;
+  question: string;
+  price: number;
+  sizeShares: number;
+  sizeUsd: number;
+  side: "BUY" | "SELL";
+  outcome: "YES" | "NO";
+  maxSlippage: number;
+}
+
+export interface PolicyViolation {
+  intentIndex: number;
+  marketRef: string;
+  rule: string;
+  message: string;
+}
+
+export interface PolicyCheckResult {
+  ok: boolean;
+  violations: PolicyViolation[];
+  approvedIntents: TradeIntent[];
+}
+
+export interface ExecutionResult {
+  mode: "dry-run" | "live";
+  cycleId: string;
+  ts: number;
+  orders: PolymarketOrder[];
+  submitted: number;
+  skipped: number;
+  violations: PolicyViolation[];
+  orderIds: string[];
+  errors: string[];
+}
+
+export interface FillEvent {
+  orderId: string;
+  tokenId: string;
+  conditionId: string;
+  side: "BUY" | "SELL";
+  price: number;
+  sizeShares: number;
+  ts: number;
+  status: "matched" | "partial" | "cancelled";
+}
+
+export interface RelayerResult {
+  policy: PolicyCheckResult;
+  execution: ExecutionResult;
+  attestationValid: boolean;
+}
+
+/** Investor permissions for authorizeUsage (stored on-chain as JSON bytes). */
+export interface InvestorPermissions {
+  role: "investor" | "auditor";
+  expiresAt: number;
+  allowedOperations: string[];
+  deniedOperations: string[];
+  rateLimit?: { maxRequestsPerDay: number };
+}
+
+/** Public performance report (no strategy leakage). */
+export interface PerformanceReport {
+  nav: number;
+  navPerShare: number;
+  totalAssets: string;
+  pnl24h: number;
+  pnl30d: number;
+  sharpe: number;
+  maxDrawdown: number;
+  tradeCount: number;
+  lastAuditRoot: string;
+  shareSupply: string;
+  ts: number;
+}
+
+export interface FundMetadata {
+  version: string;
+  model: { provider: string; modelId: string; weightsHash: string };
+  prompts: { system: string; mandate: string };
+  riskParams: {
+    theta: number;
+    maxDrawdown: number;
+    maxPositionPct: number;
+    divergenceThreshold: number;
+  };
+  memoryRoot: string;
+  createdAt: number;
+}
+
+export interface EncryptedMetadataBundle {
+  metadataHash: string;
+  encryptedURI: string;
+  iv: string;
+  authTag: string;
+  algorithm: "aes-256-gcm";
+}
+
+/** EIP-712 cross-chain intent (0G control → Polygon execution). */
+export interface CrossChainIntent {
+  intentHash: string;
+  cycleId: string;
+  targetChainId: 137 | 16602;
+  marketRef: string;
+  question: string;
+  side: "BUY" | "SELL";
+  outcome: "YES" | "NO";
+  sizeUsd: number;
+  maxSlippage: number;
+  attestationHash: string;
+  ts: number;
+}
+
+export interface RelaySubmission {
+  intentHash: string;
+  signer: string;
+  targetChainId: number;
+  marketRef: string;
+  submittedAt: number;
+  executed: boolean;
+  executionTxHash?: string;
+}
+
+export interface RelayerStatus {
+  pending: number;
+  executed: number;
+  lastRelayAt?: number;
+  bridgeAddress?: string;
+}
+
+/** ERC-7857 transfer bundle from TEE oracle re-encryption. */
+export interface TransferBundle {
+  proof: string;
+  proofHash: string;
+  oldMetadataHash: string;
+  newMetadataHash: string;
+  newEncryptedURI: string;
+  sealedKey: string;
+  receiverHasAccess: boolean;
+}
+
+export interface CloneBundle extends TransferBundle {
+  sourceTokenId: number;
+  newTokenId?: number;
 }
