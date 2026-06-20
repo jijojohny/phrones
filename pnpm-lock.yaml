@@ -71,6 +71,28 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/tee-core:
+    dependencies:
+      '@phronesis/audit':
+        specifier: workspace:*
+        version: link:../audit
+      '@phronesis/shared':
+        specifier: workspace:*
+        version: link:../shared
+      ethers:
+        specifier: 6.13.1
+        version: 6.13.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.21
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/x402-client:
     devDependencies:
       '@types/node':

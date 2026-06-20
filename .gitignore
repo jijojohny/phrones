@@ -50,6 +50,8 @@ broker_attestation_report.json
 **/attestation*.json
 **/inference-secret*
 **/compute-ledger*
+**/app-sk-*
+**/*compute*secret*
 
 # Deployment state (may contain addresses tied to funded wallets)
 .deployments.json
@@ -77,7 +79,9 @@ tools/
 node_modules/
 **/node_modules/
 dist/
+**/dist/
 build/
+**/build/
 *.tsbuildinfo
 .turbo/
 
@@ -97,8 +101,17 @@ exports/
 audit-blobs/
 storage-uploads/
 merkle-dumps/
+backtest-results/
+paper-trades/
+cycle-output/
+intents/
 *.parquet
 *.csv.local
+
+# Local overrides (keep packages/**/fixtures/ committed)
+**/strategy.local.json
+**/*.local.json
+!**/.env.example
 
 # =============================================================================
 # Logs & temp (setup scripts may echo sensitive data)
@@ -114,6 +127,8 @@ temp/
 *.swo
 *~
 .env.bak.*
+.envrc
+.npmrc
 
 # =============================================================================
 # Test & coverage
@@ -133,6 +148,8 @@ Desktop.ini
 .idea/
 .vscode/
 .cursor/
+.agent/
+agent-transcripts/
 *.code-workspace
 
 # =============================================================================
@@ -141,6 +158,8 @@ Desktop.ini
 
 docker-compose.override.yml
 dump.rdb
+.cache/
+*.pid
 
 # Foundry lock (optional local pin)
 foundry.lock

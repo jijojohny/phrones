@@ -38,6 +38,18 @@ export const env = {
   sentimentAlpha: Number(optional("SENTIMENT_ALPHA", "0.15")),
   minLiquidityUsd: Number(optional("MIN_LIQUIDITY_USD", "10000")),
   minTimeToExpirySec: Number(optional("MIN_TIME_TO_EXPIRY_SEC", "86400")),
+  ogComputeProvider: optional("OG_COMPUTE_PROVIDER"),
+  ogComputeApiKey: optional("OG_COMPUTE_API_KEY"),
+  ogComputeModel: optional("OG_COMPUTE_MODEL", "qwen/qwen2.5-omni-7b"),
+  ogComputeProxyUrl: optional(
+    "OG_COMPUTE_PROXY_URL",
+    "https://compute-network-6.integratenetwork.work/v1/proxy/chat/completions",
+  ),
+  fundNav: Number(optional("FUND_NAV", "10000")),
+  kellyTheta: Number(optional("KELLY_THETA", "0.5")),
+  maxPositionPct: Number(optional("MAX_POSITION_PCT", "0.1")),
+  maxGrossExposure: Number(optional("MAX_GROSS_EXPOSURE", "0.5")),
+  strategyPath: optional("STRATEGY_PATH"),
 };
 
 export function requireDeployerKey(): string {

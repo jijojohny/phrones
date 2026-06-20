@@ -1,21 +1,18 @@
 {
-  "name": "@phronesis/audit",
+  "name": "@phronesis/tee-core",
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "exports": {
-    "./anchor": {
-      "types": "./dist/anchor.d.ts",
-      "import": "./dist/anchor.js"
-    }
-  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "anchor": "tsx src/cli.ts"
+    "test": "tsx src/kelly/sizer.test.ts",
+    "start": "tsx src/cli.ts",
+    "paper": "tsx src/cli.ts -- --paper",
+    "backtest": "tsx src/cli.ts -- --backtest"
   },
   "dependencies": {
-    "@0gfoundation/0g-ts-sdk": "^1.2.6",
+    "@phronesis/audit": "workspace:*",
     "@phronesis/shared": "workspace:*",
     "ethers": "6.13.1"
   },

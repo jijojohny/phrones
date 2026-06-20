@@ -74,3 +74,113 @@ export interface DivergenceConfig {
   minLiquidityUsd: number;
   minTimeToExpirySec: number;
 }
+
+/** Encrypted strategy parameters (loaded at TEE boot). */
+export interface StrategyConfig {
+  nav: number;
+  kellyTheta: number;
+  maxPositionPct: number;
+  maxGrossExposure: number;
+  minBetUsd: number;
+  maxDrawdownPct: number;
+  minHoursToExpiry: number;
+  wMarket: number;
+  wModel: number;
+  wSentiment: number;
+  divergenceThreshold: number;
+  minLiquidityUsd: number;
+  bannedMarkets: string[];
+  categories: string[];
+}
+
+export interface Opportunity {
+  conditionId: string;
+  question: string;
+  side: "BUY_YES" | "BUY_NO" | "HOLD";
+  confidence: number;
+  thesis: string;
+  pModel: number;
+}
+
+export interface RankedOpportunity extends Opportunity {
+  pBlended: number;
+  kellyFraction: number;
+  wagerUsd: number;
+  edge: number;
+}
+
+export interface TradeIntent {
+  chainId: 137 | 16602;
+  target: `0x${string}`;
+  calldata: `0x${string}`;
+  value: bigint;
+  marketRef: string;
+  question: string;
+  side: "BUY" | "SELL";
+  outcome: "YES" | "NO";
+  sizeUsd: number;
+  maxSlippage: number;
+  kellyFraction: number;
+  pBlended: number;
+  attestationHash: string;
+  ts: number;
+}
+
+export interface CognitiveCycleResult {
+  cycleId: string;
+  ts: number;
+  nav: number;
+  opportunities: RankedOpportunity[];
+  intents: TradeIntent[];
+  rejected: Array<{ conditionId: string; reason: string }>;
+  llmUsed: boolean;
+}
+
+export interface RedactedAuditRecord {
+  cycleId: string;
+  ts: string;
+  nav: number;
+  intentCount: number;
+  grossExposureUsd: number;
+  llmUsed: boolean;
+  intentHash: string;
+  redacted: true;
+}
+
+export interface PaperPosition {
+  conditionId: string;
+  question: string;
+  side: "YES" | "NO";
+  entryPrice: number;
+  sizeUsd: number;
+  entryTs: number;
+}
+
+export interface PaperTrade {
+  conditionId: string;
+  question: string;
+  side: "YES" | "NO";
+  entryPrice: number;
+  exitPrice: number;
+  sizeUsd: number;
+  pnlUsd: number;
+  entryTs: number;
+  exitTs: number;
+}
+
+export interface BacktestReport {
+  startTs: number;
+  endTs: number;
+  initialNav: number;
+  finalNav: number;
+  totalReturnPct: number;
+  maxDrawdownPct: number;
+  tradeCount: number;
+  winRate: number;
+  trades: PaperTrade[];
+}
+
+export interface BacktestDay {
+  ts: number;
+  prices: Record<string, number>;
+}

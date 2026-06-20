@@ -1,0 +1,16 @@
+{
+  "nav": 10000,
+  "kellyTheta": 0.5,
+  "maxPositionPct": 0.1,
+  "maxGrossExposure": 0.5,
+  "minBetUsd": 25,
+  "maxDrawdownPct": 0.15,
+  "minHoursToExpiry": 24,
+  "wMarket": 0.4,
+  "wModel": 0.35,
+  "wSentiment": 0.25,
+  "divergenceThreshold": 0.08,
+  "minLiquidityUsd": 10000,
+  "bannedMarkets": [],
+  "categories": ["crypto", "macro", "politics"]
+}

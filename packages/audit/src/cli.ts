@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-import { anchorRoot, readLatestRoot } from "./registry.js";
-import { Sha256MerkleTree } from "./merkle-tree.js";
-import { uploadJsonBlob } from "./storage.js";
+import { anchorAuditRecord, readLatestAnchoredRoot } from "./anchor.js";
 
 async function main() {
   const record = {
@@ -13,26 +11,13 @@ async function main() {
   };
 
   console.log("Uploading audit blob to 0G Storage...");
-  const upload = await uploadJsonBlob(record);
-  console.log(`Storage rootHash: ${upload.rootHash}`);
-  console.log(`Storage txHash:   ${upload.txHash}`);
+  const result = await anchorAuditRecord(record);
+  console.log(`Storage rootHash: ${result.storageRootHash}`);
+  console.log(`Storage txHash:   ${result.storageTxHash}`);
+  console.log(`Merkle root: ${result.merkleRoot}`);
+  console.log(`Anchor txHash: ${result.anchorTxHash}`);
 
-  const tree = new Sha256MerkleTree();
-  const leaf = tree.append(JSON.stringify({ nav: record.nav, tradeCount: record.tradeCount, ts: record.ts }));
-  const merkleRoot = tree.root();
-
-  console.log(`Merkle leaf: ${leaf}`);
-  console.log(`Merkle root: ${merkleRoot}`);
-
-  const storageRootHash = upload.rootHash.startsWith("0x")
-    ? upload.rootHash
-    : `0x${upload.rootHash}`;
-
-  console.log("Anchoring root on MemoriaRegistry...");
-  const anchorTx = await anchorRoot(merkleRoot, storageRootHash);
-  console.log(`Anchor txHash: ${anchorTx}`);
-
-  const latest = await readLatestRoot();
+  const latest = await readLatestAnchoredRoot();
   console.log("Latest on-chain root:", latest.root);
   console.log("Latest storage hash:", latest.storageHash);
 }

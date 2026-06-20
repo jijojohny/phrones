@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "ts": 1781935000000,
+  "markets": [
+    {
+      "conditionId": "0xfixture001",
+      "question": "Will Bitcoin reach $150k before July 2026?",
+      "slug": "btc-150k-july-2026",
+      "yesAssetId": "100001",
+      "pMarket": 0.42,
+      "pSentiment": 0.52,
+      "divergence": 0.10,
+      "bid": 0.41,
+      "ask": 0.43,
+      "bidAskSpread": 0.02,
+      "volume24hr": 250000,
+      "sentimentScore": 0.4,
+      "sentimentConfidence": 0.6,
+      "sentimentSourceCount": 3,
+      "expiry": 1785542400000,
+      "tags": ["crypto"],
+      "updatedAt": 1781935000000
+    },
+    {
+      "conditionId": "0xfixture002",
+      "question": "Will the Fed cut rates in March 2026?",
+      "slug": "fed-cut-march-2026",
+      "yesAssetId": "200001",
+      "pMarket": 0.65,
+      "pSentiment": 0.52,
+      "divergence": -0.13,
+      "bid": 0.64,
+      "ask": 0.66,
+      "bidAskSpread": 0.02,
+      "volume24hr": 180000,
+      "sentimentScore": -0.35,
+      "sentimentConfidence": 0.7,
+      "sentimentSourceCount": 5,
+      "expiry": 1785542400000,
+      "tags": ["macro"],
+      "updatedAt": 1781935000000
+    },
+    {
+      "conditionId": "0xfixture003",
+      "question": "Will Trump win the 2028 Republican nomination?",
+      "slug": "trump-gop-2028",
+      "yesAssetId": "300001",
+      "pMarket": 0.71,
+      "pSentiment": 0.80,
+      "divergence": 0.09,
+      "bid": 0.70,
+      "ask": 0.72,
+      "bidAskSpread": 0.02,
+      "volume24hr": 95000,
+      "sentimentScore": 0.5,
+      "sentimentConfidence": 0.55,
+      "sentimentSourceCount": 2,
+      "expiry": 1853280000000,
+      "tags": ["politics"],
+      "updatedAt": 1781935000000
+    }
+  ]
+}

@@ -33,6 +33,11 @@
     "phase1:state": "pnpm --filter @phronesis/ingestion phase1 -- --duration=120 --markets=50",
     "phase1:fixture": "pnpm --filter @phronesis/ingestion phase1 -- --fixture --sentiment-only --markets=50",
     "phase1:sentiment": "pnpm --filter @phronesis/ingestion phase1 -- --sentiment-only --markets=50",
-    "phase1:x402": "pnpm --filter @phronesis/ingestion phase1 -- --x402-demo --fixture --sentiment-only --markets=5"
+    "phase1:x402": "pnpm --filter @phronesis/ingestion phase1 -- --x402-demo --fixture --sentiment-only --markets=5",
+    "phase2:cognitive": "pnpm --filter @phronesis/tee-core start -- --fixture",
+    "phase2:paper": "pnpm --filter @phronesis/tee-core start -- --fixture --paper",
+    "phase2:backtest": "pnpm --filter @phronesis/tee-core backtest",
+    "phase2:audit": "pnpm --filter @phronesis/tee-core start -- --fixture --anchor",
+    "phase2:test": "pnpm --filter @phronesis/tee-core test"
   }
 }
