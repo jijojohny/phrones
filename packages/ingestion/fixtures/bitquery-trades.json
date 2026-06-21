@@ -1,0 +1,23 @@
+[
+  {
+    "conditionId": "0xfixture001",
+    "price": 0.43,
+    "amount": 1200,
+    "side": "BUY",
+    "ts": 1781935000000
+  },
+  {
+    "conditionId": "0xfixture002",
+    "price": 0.64,
+    "amount": 800,
+    "side": "SELL",
+    "ts": 1781935001000
+  },
+  {
+    "conditionId": "0xfixture003",
+    "price": 0.71,
+    "amount": 500,
+    "side": "BUY",
+    "ts": 1781935002000
+  }
+]

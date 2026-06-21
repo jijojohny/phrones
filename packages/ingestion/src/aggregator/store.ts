@@ -45,6 +45,17 @@ export class MarketStateStore {
     this.version += 1;
   }
 
+  applyBitqueryPrice(conditionId: string, price: number, ts: number): boolean {
+    const entry = this.markets.get(conditionId);
+    if (!entry || price <= 0) return false;
+
+    entry.pMarket = clamp(price, 0.01, 0.99);
+    this.refreshDivergence(entry);
+    entry.updatedAt = ts || Date.now();
+    this.version += 1;
+    return true;
+  }
+
   applyTick(tick: MarketTick): boolean {
     const conditionId =
       tick.conditionId || this.assetToCondition.get(tick.assetId) || "";

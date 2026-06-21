@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    "./cross-chain-relayer": "./src/cross-chain-relayer.ts",
+    "./eip712": "./src/eip712.ts"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

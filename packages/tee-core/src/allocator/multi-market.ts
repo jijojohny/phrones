@@ -1,13 +1,37 @@
 import type { RankedOpportunity, StrategyConfig } from "@phronesis/shared";
+import {
+  applyQpWeights,
+  buildQpInput,
+  solveMeanVarianceQp,
+} from "./qp-solver.js";
 
 export function allocateMultiMarket(
   opportunities: RankedOpportunity[],
   strategy: StrategyConfig,
 ): RankedOpportunity[] {
-  const sorted = [...opportunities]
+  const candidates = [...opportunities]
     .filter((o) => o.wagerUsd > 0)
     .sort((a, b) => b.edge * b.kellyFraction - a.edge * a.kellyFraction);
 
+  if (candidates.length === 0) return [];
+  if (candidates.length === 1) return candidates;
+
+  const qpInput = buildQpInput(candidates);
+  const { weights } = solveMeanVarianceQp(qpInput, strategy);
+  const allocated = applyQpWeights(candidates, weights, strategy);
+
+  if (allocated.length === 0) {
+    return allocateGreedy(candidates, strategy);
+  }
+
+  return allocated;
+}
+
+/** Greedy fallback when QP returns zero weights. */
+function allocateGreedy(
+  sorted: RankedOpportunity[],
+  strategy: StrategyConfig,
+): RankedOpportunity[] {
   const selected: RankedOpportunity[] = [];
   let grossFraction = 0;
 

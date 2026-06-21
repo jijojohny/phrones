@@ -1,0 +1,25 @@
+{
+  "name": "@phronesis/daemon",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/cli.ts",
+    "once": "tsx src/cli.ts -- --once"
+  },
+  "dependencies": {
+    "@phronesis/audit": "workspace:*",
+    "@phronesis/execution": "workspace:*",
+    "@phronesis/ingestion": "workspace:*",
+    "@phronesis/relayer": "workspace:*",
+    "@phronesis/shared": "workspace:*",
+    "@phronesis/tee-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

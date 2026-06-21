@@ -11,6 +11,10 @@
     "./storage": {
       "types": "./dist/storage.d.ts",
       "import": "./dist/storage.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js"
     }
   },
   "scripts": {

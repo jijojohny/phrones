@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { env } from "@phronesis/shared";
 import type { DivergenceConfig } from "@phronesis/shared";
 import { demoX402Call } from "@phronesis/x402-client";
 import { rankAlerts } from "./anomaly/divergence.js";
 import { MarketStateStore } from "./aggregator/store.js";
 import { tryEnrichFromBitquery } from "./bitquery/graphql.js";
+import { startKafkaConsumer } from "./bitquery/kafka-consumer.js";
+import { loadFixtureMarkets } from "./fixtures/expand-markets.js";
+import { FeedHealthTracker } from "./metrics/feed-health.js";
+import { startMetricsServer } from "./metrics/server.js";
+import { MarketStatePublisher } from "./persistence/market-state-publisher.js";
 import {
   collectAssetIds,
   fetchActiveMarkets,
@@ -17,7 +19,6 @@ import { PolymarketClobWs } from "./polymarket/clob-ws.js";
 import { runSentimentPipeline } from "./sentiment/pipeline.js";
 
 const args = process.argv.slice(2);
-const pkgRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 function argNum(prefix: string, fallback: number): number {
   const raw = args.find((a) => a.startsWith(`${prefix}=`))?.split("=")[1];
@@ -32,6 +33,8 @@ const sentimentPollSec = argNum("--sentiment-poll", 60);
 const runX402Demo = args.includes("--x402-demo");
 const sentimentOnly = args.includes("--sentiment-only");
 const useFixture = args.includes("--fixture");
+const enableMetrics = args.includes("--metrics");
+const kafkaFixture = args.includes("--kafka-fixture") || useFixture;
 
 const divergenceConfig: DivergenceConfig = {
   threshold: env.divergenceThreshold,
@@ -41,14 +44,7 @@ const divergenceConfig: DivergenceConfig = {
 };
 
 function formatTable(alerts: ReturnType<typeof rankAlerts>): string {
-  const header = [
-    "DIVERG",
-    "p_mkt",
-    "p_sent",
-    "vol24h",
-    "FLAG",
-    "QUESTION",
-  ];
+  const header = ["DIVERG", "p_mkt", "p_sent", "vol24h", "FLAG", "QUESTION"];
   const rows = alerts.map((a) => [
     a.divergence >= 0 ? `+${a.divergence.toFixed(3)}` : a.divergence.toFixed(3),
     a.pMarket.toFixed(3),
@@ -68,65 +64,98 @@ function formatTable(alerts: ReturnType<typeof rankAlerts>): string {
   return [line(header), line(widths.map((w) => "─".repeat(w))), ...rows.map(line)].join("\n");
 }
 
-function loadFixtureMarkets(): ActiveMarket[] {
-  const path = resolve(pkgRoot, "fixtures/sample-markets.json");
-  return JSON.parse(readFileSync(path, "utf8")) as ActiveMarket[];
-}
-
 async function loadMarkets(count: number): Promise<ActiveMarket[]> {
   if (useFixture) {
-    console.log("[fixture] using sample-markets.json (offline mode)");
-    return loadFixtureMarkets();
+    const markets = loadFixtureMarkets(count);
+    console.log(`[fixture] using ${markets.length} offline markets`);
+    return markets;
   }
   return fetchActiveMarkets(count);
 }
 
-async function refreshSentiment(
-  store: MarketStateStore,
-  markets: Awaited<ReturnType<typeof fetchActiveMarkets>>,
-): Promise<void> {
-  const signals = await runSentimentPipeline(markets);
-  store.applySentiment(signals);
-  console.log(`[sentiment] updated ${signals.length} market signals`);
-}
-
 async function main() {
-  console.log("=== Phronesis Phase 1 — Data Plane MVP ===\n");
+  console.log("=== Phronesis Phase 1 — Data Plane ===\n");
   console.log(
     `Markets=${marketCount}  duration=${durationSec}s  refresh=${refreshSec}s  τ=${divergenceConfig.threshold}`,
+  );
+  console.log(
+    `Redis=${env.redisUrl ? "yes" : "no"}  Timescale=${env.databaseUrl ? "yes" : "no"}  FinBERT=${env.finbertEnabled}`,
   );
 
   if (runX402Demo) {
     await demoX402Call();
   }
 
+  const health = new FeedHealthTracker();
+  const publisher = new MarketStatePublisher();
+  const metricsServer = enableMetrics ? startMetricsServer(env.phase1MetricsPort) : null;
+
   console.log(`\nFetching top ${marketCount} active Polymarket markets...`);
   const markets = await loadMarkets(marketCount);
-  if (markets.length === 0) throw new Error("No active markets from Gamma API");
+  if (markets.length === 0) throw new Error("No active markets");
 
   const store = new MarketStateStore(divergenceConfig.alpha);
   store.bootstrap(markets);
   console.log(`Bootstrapped ${store.size()} markets`);
 
-  await tryEnrichFromBitquery(env.bitqueryApiKey);
-  await refreshSentiment(store, markets);
+  let sentimentSource: "lexicon" | "finbert" | "hybrid" = "lexicon";
+  let kafkaEvents = 0;
 
-  if (sentimentOnly || useFixture) {
+  const refreshSentiment = async (): Promise<void> => {
+    const { signals, source } = await runSentimentPipeline(markets);
+    store.applySentiment(signals);
+    sentimentSource = source;
+    console.log(`[sentiment] updated ${signals.length} signals (source=${source})`);
+  };
+
+  await tryEnrichFromBitquery(env.bitqueryApiKey);
+  await refreshSentiment();
+
+  const kafka = await startKafkaConsumer(
+    (trade) => {
+      if (store.applyBitqueryPrice(trade.conditionId, trade.price, trade.ts)) {
+        kafkaEvents += 1;
+      }
+    },
+    { fixture: kafkaFixture },
+  );
+
+  const publishState = async (): Promise<void> => {
+    const snapshot = store.snapshot();
+    const metrics = health.snapshot(store.size(), {
+      sentimentSource,
+      kafkaEvents: kafka.eventCount(),
+    });
+    const result = await publisher.publish(snapshot, metrics);
+    metrics.redisPublished = result.redis;
+    metrics.timescalePublished = result.timescale;
+    metrics.kafkaEvents = kafka.eventCount();
+    metricsServer?.update(metrics);
+  };
+
+  if (sentimentOnly || (useFixture && !args.includes("--live-ws"))) {
+    await publishState();
     const snapshot = store.snapshot();
     console.log(formatTable(rankAlerts(snapshot.markets, divergenceConfig, 25)));
+    await kafka.stop();
+    await publisher.close();
+    metricsServer?.close();
     return;
   }
 
   const assetIds = collectAssetIds(markets, marketCount * 2);
   console.log(`\nSubscribing to ${assetIds.length} outcome tokens via CLOB WS...\n`);
 
-  let tickCount = 0;
   const ws = new PolymarketClobWs({
     assetIds,
     onTick: (tick) => {
-      if (store.applyTick(tick)) tickCount += 1;
+      if (store.applyTick(tick)) {
+        health.recordTick(tick.assetId, tick.ts);
+      }
     },
     onError: (err) => console.error("[clob-ws]", err.message),
+    onReconnect: () => health.recordReconnect(),
+    onGapFill: (count) => health.recordGapFill(count),
   });
 
   ws.connect();
@@ -137,15 +166,23 @@ async function main() {
     const tradeable = alerts.filter((a) => a.tradeable).length;
 
     console.clear();
-    console.log(`=== Market State v${snapshot.version} | ticks=${tickCount} | tradeable=${tradeable} ===`);
+    console.log(
+      `=== Market State v${snapshot.version} | ticks=${health.tickCount} | tradeable=${tradeable} | kafka=${kafka.eventCount()} ===`,
+    );
     console.log(formatTable(alerts));
     console.log(`\nUpdated ${new Date(snapshot.ts).toISOString()}  (Ctrl+C to stop)`);
   };
 
   printDashboard();
-  const refreshTimer = setInterval(printDashboard, refreshSec * 1000);
+  await publishState();
+
+  const refreshTimer = setInterval(() => {
+    printDashboard();
+    publishState().catch(console.error);
+  }, refreshSec * 1000);
+
   const sentimentTimer = setInterval(
-    () => refreshSentiment(store, markets).catch(console.error),
+    () => refreshSentiment().catch(console.error),
     sentimentPollSec * 1000,
   );
 
@@ -154,13 +191,17 @@ async function main() {
   clearInterval(refreshTimer);
   clearInterval(sentimentTimer);
   ws.close();
+  await kafka.stop();
+  await publishState();
+  await publisher.close();
+  metricsServer?.close();
 
   const final = store.snapshot();
-  console.log(`\n=== Final snapshot (${final.markets.length} markets, ${tickCount} ticks) ===`);
+  console.log(`\n=== Final snapshot (${final.markets.length} markets, ${health.tickCount} ticks) ===`);
   console.log(formatTable(rankAlerts(final.markets, divergenceConfig, 20)));
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
   process.exit(1);
 });

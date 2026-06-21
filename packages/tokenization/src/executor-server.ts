@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { env } from "@phronesis/shared";
+import { fetchLatestAudit, verifyAuditRoot } from "./audit.js";
 import { buildPerformanceReport } from "./performance.js";
 
 export function startExecutorServer(port = env.sealedExecutorPort): void {
@@ -40,12 +41,35 @@ export function startExecutorServer(port = env.sealedExecutorPort): void {
       return;
     }
 
+    if (url.pathname === "/audit/latest") {
+      const latest = await fetchLatestAudit();
+      if (!latest) {
+        json(res, 404, { error: "No audit roots anchored" });
+        return;
+      }
+      json(res, 200, latest);
+      return;
+    }
+
+    if (url.pathname === "/audit/verify") {
+      const root = url.searchParams.get("root");
+      if (!root) {
+        json(res, 400, { error: "Missing root query param" });
+        return;
+      }
+      const ok = await verifyAuditRoot(root);
+      json(res, 200, { root, verified: ok });
+      return;
+    }
+
     json(res, 404, { error: "Not found" });
   });
 
   server.listen(port, () => {
     console.log(`[sealed-executor] http://localhost:${port}`);
     console.log(`  GET /performance?investor=0x...`);
+    console.log(`  GET /audit/latest`);
+    console.log(`  GET /audit/verify?root=0x...`);
     console.log(`  GET /health`);
   });
 }

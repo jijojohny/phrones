@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import {PhronesisShare} from "./PhronesisShare.sol";
 import {PhronesisOracle} from "./PhronesisOracle.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
 import {IERC7857} from "./interfaces/IERC7857.sol";
 import {IAgentOracle} from "./interfaces/IAgentOracle.sol";
 
@@ -44,10 +45,16 @@ contract PhronesisFund is IERC7857 {
     mapping(uint256 => mapping(address => bytes)) private _sealedKeys;
     mapping(uint256 => mapping(address => UsageAuth)) public executorAuth;
     mapping(address => UsageAuth) public investorAuth;
+    mapping(address => bool) public allowedStablecoins;
+    mapping(address => uint8) public stablecoinDecimals;
+    mapping(address => uint256) public stablecoinBalances;
 
     event FundInitialized(bytes32 metadataHash, string encryptedURI);
     event Deposited(address indexed investor, uint256 amount, uint256 shares);
     event Redeemed(address indexed investor, uint256 shares, uint256 amount);
+    event StablecoinAllowed(address indexed token, bool allowed, uint8 decimals);
+    event DepositedERC20(address indexed investor, address indexed token, uint256 amount, uint256 shares);
+    event RedeemedERC20(address indexed investor, address indexed token, uint256 shares, uint256 amount);
     event UsageAuthorized(address indexed investor, uint256 expiresAt);
     event UsageRevoked(address indexed investor);
     event NavUpdated(uint256 navPerShare, uint256 totalAssets);
@@ -64,6 +71,8 @@ contract PhronesisFund is IERC7857 {
     error InvalidOracleProof();
     error InvalidRecipient();
     error TokenNotFound();
+    error StablecoinNotAllowed();
+    error InsufficientStablecoinLiquidity();
 
     modifier onlyFundOwner() {
         if (msg.sender != fundOwner) revert NotOwner();
@@ -234,6 +243,16 @@ contract PhronesisFund is IERC7857 {
         return h;
     }
 
+    // ─── Stablecoin allowlist ───────────────────────────────────────────────
+
+    function setStablecoinAllowed(address token, bool allowed, uint8 decimals_) external onlyFundOwner {
+        allowedStablecoins[token] = allowed;
+        if (allowed) {
+            stablecoinDecimals[token] = decimals_;
+        }
+        emit StablecoinAllowed(token, allowed, decimals_);
+    }
+
     // ─── Fractional shares ──────────────────────────────────────────────────
 
     function deposit() external payable returns (uint256 shares) {
@@ -264,6 +283,75 @@ contract PhronesisFund is IERC7857 {
         if (!ok) revert TransferFailed();
 
         emit Redeemed(msg.sender, shares, amount);
+    }
+
+    /// @dev Deposit USDC/USDT (or any allowlisted ERC-20) — amount in token native decimals
+    function depositERC20(address token, uint256 amount) external returns (uint256 shares) {
+        if (!allowedStablecoins[token]) revert StablecoinNotAllowed();
+        if (amount == 0) revert ZeroAmount();
+
+        uint256 amountNorm = _toNormalized(amount, stablecoinDecimals[token]);
+        if (totalAssets + amountNorm > config.maxAUM) revert ExceedsMaxAUM();
+
+        shares = (amountNorm * 1e18) / navPerShare;
+        if (shares == 0) revert ZeroAmount();
+
+        _safeTransferFrom(token, msg.sender, address(this), amount);
+
+        totalAssets += amountNorm;
+        stablecoinBalances[token] += amount;
+        shareToken.mint(msg.sender, shares);
+
+        emit DepositedERC20(msg.sender, token, amount, shares);
+        emit Deposited(msg.sender, amountNorm, shares);
+    }
+
+    /// @dev Redeem shares for an allowlisted stablecoin payout
+    function redeemERC20(uint256 shares, address token) external {
+        if (!allowedStablecoins[token]) revert StablecoinNotAllowed();
+        if (shares == 0) revert ZeroAmount();
+        if (shareToken.balanceOf(msg.sender) < shares) revert NotAuthorized();
+
+        uint256 amountNorm = (shares * navPerShare) / 1e18;
+        if (amountNorm == 0) revert ZeroAmount();
+        if (amountNorm > totalAssets) revert ZeroAmount();
+
+        uint256 amount = _fromNormalized(amountNorm, stablecoinDecimals[token]);
+        if (amount == 0) revert ZeroAmount();
+        if (amount > stablecoinBalances[token]) revert InsufficientStablecoinLiquidity();
+
+        shareToken.burn(msg.sender, shares);
+        totalAssets -= amountNorm;
+        stablecoinBalances[token] -= amount;
+
+        _safeTransfer(token, msg.sender, amount);
+
+        emit RedeemedERC20(msg.sender, token, shares, amount);
+        emit Redeemed(msg.sender, shares, amountNorm);
+    }
+
+    function _toNormalized(uint256 amount, uint8 decimals_) internal pure returns (uint256) {
+        if (decimals_ == 18) return amount;
+        if (decimals_ < 18) return amount * (10 ** (18 - decimals_));
+        return amount / (10 ** (decimals_ - 18));
+    }
+
+    function _fromNormalized(uint256 amountNorm, uint8 decimals_) internal pure returns (uint256) {
+        if (decimals_ == 18) return amountNorm;
+        if (decimals_ < 18) return amountNorm / (10 ** (18 - decimals_));
+        return amountNorm * (10 ** (decimals_ - 18));
+    }
+
+    function _safeTransfer(address token, address to, uint256 amount) internal {
+        (bool success, bytes memory data) =
+            token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, amount));
+        if (!success || (data.length > 0 && !abi.decode(data, (bool)))) revert TransferFailed();
+    }
+
+    function _safeTransferFrom(address token, address from, address to, uint256 amount) internal {
+        (bool success, bytes memory data) =
+            token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount));
+        if (!success || (data.length > 0 && !abi.decode(data, (bool)))) revert TransferFailed();
     }
 
     /// @dev Legacy alias for investor authorizeUsage (address-first overload)

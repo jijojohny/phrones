@@ -8,12 +8,25 @@ import type {
   StrategyConfig,
   TradeIntent,
 } from "@phronesis/shared";
+import { env } from "@phronesis/shared";
 import { allocateMultiMarket } from "../allocator/multi-market.js";
+import {
+  attestationHashFromQuote,
+  fetchAttestationQuote,
+  verifyAttestationQuote,
+} from "../attestation/verify.js";
+import { normalizeSnapshot } from "../ingest/decrypt-snapshot.js";
 import { rankWithComputeLlm } from "../llm/compute-client.js";
 import { rankWithRules } from "../llm/rules-ranker.js";
 import { fractionalKellyNo, kellyWagerUsd } from "../kelly/sizer.js";
 import { blendProbability } from "../probability/blend.js";
-import { checkDrawdownGuard, checkMarketGuards } from "../risk/guards.js";
+import {
+  checkCircuitBreaker,
+  checkCorrelationGuard,
+  checkDrawdownGuard,
+  checkMarketGuards,
+} from "../risk/guards.js";
+import { signTradeIntents } from "../signing/eip712-intent.js";
 
 const POLYMARKET_CTF_EXCHANGE = "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E" as const;
 
@@ -23,15 +36,31 @@ export interface RunCognitiveCycleOptions {
   useLlm?: boolean;
   peakNav?: number;
   attestationHash?: string;
+  signIntents?: boolean;
+  openBook?: MarketEntry[];
+  strictFreshness?: boolean;
 }
 
 export async function runCognitiveCycle(
   opts: RunCognitiveCycleOptions,
 ): Promise<CognitiveCycleResult> {
-  const { snapshot, strategy, peakNav = strategy.nav } = opts;
+  const { strategy, peakNav = strategy.nav } = opts;
+  const snapshot = normalizeSnapshot(opts.snapshot, opts.strictFreshness);
   const cycleId = `cycle-${snapshot.ts}`;
   const rejected: CognitiveCycleResult["rejected"] = [];
   const marketById = new Map(snapshot.markets.map((m) => [m.conditionId, m]));
+  const openBook = opts.openBook ?? [];
+
+  let attestationHash = opts.attestationHash ?? `local-${cycleId}`;
+  if (opts.useLlm) {
+    const quote = await fetchAttestationQuote();
+    const attestationOk = verifyAttestationQuote(quote);
+    const breaker = checkCircuitBreaker(snapshot.ts, attestationOk, env.maxSnapshotStaleMs);
+    if (!breaker.ok) {
+      return emptyCycle(cycleId, strategy.nav, false, breaker.reason ?? "circuit breaker");
+    }
+    attestationHash = attestationHashFromQuote(quote);
+  }
 
   const dd = checkDrawdownGuard(peakNav, strategy.nav, strategy.maxDrawdownPct);
   if (!dd.ok) {
@@ -40,8 +69,18 @@ export async function runCognitiveCycle(
 
   const eligible = snapshot.markets.filter((m) => {
     const g = checkMarketGuards(m, strategy, snapshot.ts);
-    if (!g.ok) rejected.push({ conditionId: m.conditionId, reason: g.reason ?? "rejected" });
-    return g.ok;
+    if (!g.ok) {
+      rejected.push({ conditionId: m.conditionId, reason: g.reason ?? "rejected" });
+      return false;
+    }
+
+    const corr = checkCorrelationGuard(m, openBook, env.maxCorrelation);
+    if (!corr.ok) {
+      rejected.push({ conditionId: m.conditionId, reason: corr.reason ?? "correlated" });
+      return false;
+    }
+
+    return true;
   });
 
   let opportunities: Opportunity[] = [];
@@ -73,11 +112,16 @@ export async function runCognitiveCycle(
     .filter((o): o is RankedOpportunity => o !== null);
 
   const allocated = allocateMultiMarket(ranked, strategy);
-  const attestationHash = opts.attestationHash ?? `local-${cycleId}`;
 
-  const intents: TradeIntent[] = allocated.map((opp) =>
+  let intents: TradeIntent[] = allocated.map((opp) =>
     toTradeIntent(opp, strategy, attestationHash, snapshot.ts),
   );
+
+  const shouldSign = opts.signIntents ?? Boolean(env.teeSignerPrivateKey || env.sessionKeyPrivateKey);
+  const signerKey = env.teeSignerPrivateKey || env.sessionKeyPrivateKey;
+  if (shouldSign && signerKey) {
+    intents = await signTradeIntents(intents, signerKey);
+  }
 
   return {
     cycleId,
@@ -190,6 +234,7 @@ export function hashIntents(intents: TradeIntent[]): string {
       outcome: i.outcome,
       sizeUsd: i.sizeUsd,
       kellyFraction: i.kellyFraction,
+      signature: i.signature,
     })),
   );
   return createHash("sha256").update(payload).digest("hex");

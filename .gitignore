@@ -1,5 +1,6 @@
 # Documentation (local plans — keep .env.example tracked)
 *.md
+!README.md
 
 # =============================================================================
 # Secrets & credentials — NEVER commit
@@ -56,6 +57,7 @@ broker_attestation_report.json
 # Tokenization / ERC-7857 generated artifacts (ciphertext, sealed keys)
 **/transfer-bundle.json
 packages/tokenization/fixtures/encrypted-metadata.json
+packages/tee-core/fixtures/strategy.default.encrypted.json
 **/sealed-key*.json
 **/*sealedKey*
 
@@ -69,6 +71,8 @@ packages/tokenization/fixtures/encrypted-metadata.json
 .deployments.json
 deployments.local.json
 deployments/
+config/safe-polygon.json
+config/*.local.json
 
 # Foundry broadcast & cache (tx metadata; cache may store private keys)
 broadcast/
@@ -97,11 +101,14 @@ build/
 .next/
 **/.next/
 *.tsbuildinfo
+**/*.tsbuildinfo
 .turbo/
+**/.turbo/
 
 # pnpm (this repo uses pnpm — ignore npm/yarn lockfiles)
 .pnpm-store/
 .pnpm-debug.log*
+pnpm-debug.log*
 package-lock.json
 yarn.lock
 npm-shrinkwrap.json
@@ -143,6 +150,7 @@ temp/
 .env.bak.*
 .envrc
 .npmrc
+/tmp/phronesis-*.log
 
 # =============================================================================
 # Test & coverage
@@ -161,10 +169,24 @@ Thumbs.db
 Desktop.ini
 .idea/
 .vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
 .cursor/
 .agent/
 agent-transcripts/
+mcps/
+terminals/
 *.code-workspace
+
+# =============================================================================
+# Deploy platforms (Vercel, Railway, Netlify, Fly)
+# =============================================================================
+
+.vercel/
+.railway/
+.netlify/
+.fly/
+.output/
 
 # =============================================================================
 # Docker / infra local overrides
@@ -173,7 +195,14 @@ agent-transcripts/
 docker-compose.override.yml
 dump.rdb
 .cache/
+**/.cache/
 *.pid
+
+# ML / FinBERT local model cache
+*.onnx
+*.onnx.data
+**/models--*/
+.huggingface/
 
 # Foundry lock (optional local pin)
 foundry.lock

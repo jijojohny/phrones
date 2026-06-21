@@ -2,24 +2,40 @@ import type { ActiveMarket } from "../polymarket/markets.js";
 import type { SentimentSignal } from "@phronesis/shared";
 import { env } from "@phronesis/shared";
 import { fetchCryptoPanicPosts, postToScore } from "./cryptopanic.js";
+import { entityKeywordBoost, matchMarketToEntities } from "./entity-map.js";
+import { isFinbertReady, scoreWithFinbert } from "./finbert.js";
 import { keywordOverlap, lexiconScore } from "./lexicon.js";
 
 const MATCH_THRESHOLD = 0.15;
 
+export type SentimentSource = "lexicon" | "finbert" | "hybrid";
+
 export async function runSentimentPipeline(
   markets: ActiveMarket[],
-): Promise<SentimentSignal[]> {
+): Promise<{ signals: SentimentSignal[]; source: SentimentSource }> {
   const signals: SentimentSignal[] = [];
+  let usedFinbert = false;
 
   for (const m of markets) {
-    const { score, confidence } = lexiconScore(m.question);
+    const entities = matchMarketToEntities(m);
+    const lex = lexiconScore(m.question);
+    const fin = env.finbertEnabled ? await scoreWithFinbert(m.question) : null;
+    if (fin) usedFinbert = true;
+
+    const entityBoost = entityKeywordBoost(m.question, entities);
+    const score = fin ? fin.score * 0.6 + lex.score * 0.4 : lex.score;
+    const confidence = Math.min(
+      1,
+      (fin?.confidence ?? lex.confidence * 0.5) + entityBoost * 0.2,
+    );
+
     if (confidence > 0) {
       signals.push({
-        entityId: m.slug,
+        entityId: entities[0]?.entityId ?? m.slug,
         conditionId: m.conditionId,
         score,
-        confidence: confidence * 0.5,
-        sourceCount: 1,
+        confidence,
+        sourceCount: fin ? 2 : 1,
         headline: m.question,
         ts: Date.now(),
       });
@@ -36,11 +52,18 @@ export async function runSentimentPipeline(
         err instanceof Error ? err.message : err,
       );
     }
-  } else {
+  } else if (!env.finbertEnabled) {
     console.warn("[sentiment] CRYPTOPANIC_API_KEY not set — using question lexicon only");
   }
 
-  return mergeSignals(signals);
+  const merged = mergeSignals(signals);
+  const source: SentimentSource = usedFinbert
+    ? isFinbertReady()
+      ? "finbert"
+      : "hybrid"
+    : "lexicon";
+
+  return { signals: merged, source };
 }
 
 function mapPostsToMarkets(
@@ -58,13 +81,15 @@ function mapPostsToMarkets(
 
     for (const m of markets) {
       const overlap = keywordOverlap(post.title, m.question);
-      if (overlap < MATCH_THRESHOLD) continue;
+      const entities = matchMarketToEntities(m);
+      const entityOverlap = entityKeywordBoost(post.title, entities);
+      if (overlap < MATCH_THRESHOLD && entityOverlap < 0.25) continue;
 
       out.push({
-        entityId: m.slug,
+        entityId: entities[0]?.entityId ?? m.slug,
         conditionId: m.conditionId,
         score: blendedScore,
-        confidence: blendedConf * Math.min(1, overlap * 2),
+        confidence: blendedConf * Math.min(1, overlap * 2 + entityOverlap),
         sourceCount: 1,
         headline: post.title,
         ts,

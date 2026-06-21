@@ -6,6 +6,7 @@
   "exports": {
     "./polymarket/order-builder": "./src/polymarket/order-builder.ts",
     "./polymarket/executor": "./src/polymarket/executor.ts",
+    "./polymarket/fill-tracker": "./src/polymarket/fill-tracker.ts",
     "./relayer/pipeline": "./src/relayer/pipeline.ts"
   },
   "scripts": {
@@ -13,16 +14,22 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx src/policy/validator.test.ts",
     "start": "tsx src/cli.ts",
-    "rotate-session": "tsx src/session/rotate-cli.ts"
+    "rotate-session": "tsx src/session/rotate-cli.ts",
+    "init-safe": "tsx src/safe/init-cli.ts",
+    "scheduler": "tsx src/scheduler/cycle.ts"
   },
   "dependencies": {
     "@phronesis/audit": "workspace:*",
     "@phronesis/shared": "workspace:*",
     "@phronesis/tee-core": "workspace:*",
-    "ethers": "6.13.1"
+    "@polymarket/clob-client-v2": "^1.0.6",
+    "ethers": "6.13.1",
+    "viem": "^2.21.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

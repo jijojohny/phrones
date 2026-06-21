@@ -1,0 +1,29 @@
+{
+  "entities": [
+    {
+      "entityId": "BTC",
+      "keywords": ["bitcoin", "btc", "150k", "crypto"],
+      "conditionPatterns": ["btc", "bitcoin", "crypto"]
+    },
+    {
+      "entityId": "FED",
+      "keywords": ["fed", "federal reserve", "rate cut", "interest rate", "fomc"],
+      "conditionPatterns": ["fed", "rate", "fomc", "macro"]
+    },
+    {
+      "entityId": "TRUMP",
+      "keywords": ["trump", "republican", "gop", "nomination"],
+      "conditionPatterns": ["trump", "republican", "election", "politics"]
+    },
+    {
+      "entityId": "ETH",
+      "keywords": ["ethereum", "eth", "ether"],
+      "conditionPatterns": ["eth", "ethereum"]
+    },
+    {
+      "entityId": "AI",
+      "keywords": ["artificial intelligence", "openai", "llm", "agi"],
+      "conditionPatterns": ["ai", "openai", "technology"]
+    }
+  ]
+}

@@ -15,15 +15,22 @@
     "./audit": {
       "types": "./dist/audit/redacted.d.ts",
       "import": "./dist/audit/redacted.js"
+    },
+    "./signing": {
+      "types": "./dist/signing/eip712-intent.d.ts",
+      "import": "./dist/signing/eip712-intent.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/kelly/sizer.test.ts",
+    "test": "tsx src/kelly/sizer.test.ts && tsx src/allocator/qp-solver.test.ts",
     "start": "tsx src/cli.ts",
     "paper": "tsx src/cli.ts -- --paper",
-    "backtest": "tsx src/cli.ts -- --backtest"
+    "backtest": "tsx src/cli.ts -- --backtest",
+    "backtest:snapshot": "tsx src/cli.ts -- --backtest-snapshot --fixture",
+    "encrypt-strategy": "tsx src/strategy/encrypt-cli.ts",
+    "attestation-server": "tsx src/cli.ts -- --attestation-server --fixture"
   },
   "dependencies": {
     "@phronesis/audit": "workspace:*",

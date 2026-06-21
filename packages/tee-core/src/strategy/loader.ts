@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StrategyConfig } from "@phronesis/shared";
 import { env } from "@phronesis/shared";
+import { loadEncryptedStrategy } from "./encrypted-loader.js";
 
 const pkgRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
 
@@ -24,9 +25,24 @@ const DEFAULT_STRATEGY: StrategyConfig = {
 };
 
 export function loadStrategyConfig(customPath?: string): StrategyConfig {
+  if (env.encryptedStrategyPath || customPath?.endsWith(".encrypted.json")) {
+    try {
+      return loadEncryptedStrategy(customPath ?? env.encryptedStrategyPath);
+    } catch (err) {
+      console.warn(
+        "[strategy] encrypted load failed:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   const defaultPath = resolve(pkgRoot, "fixtures/strategy.default.json");
-  const path =
-    customPath || (env.strategyPath ? env.strategyPath : defaultPath);
+  const path = customPath || (env.strategyPath ? env.strategyPath : defaultPath);
+
+  if (path.endsWith(".encrypted.json")) {
+    return loadEncryptedStrategy(path);
+  }
+
   try {
     const raw = JSON.parse(readFileSync(path, "utf8")) as Partial<StrategyConfig>;
     return { ...DEFAULT_STRATEGY, ...raw, nav: raw.nav ?? env.fundNav };

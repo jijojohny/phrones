@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./vaults": "./src/vaults/index.ts"
+    "./vaults": "./src/vaults/index.ts",
+    "./snapshot": "./src/snapshot-builder.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -12,17 +13,23 @@
     "start": "tsx src/cli.ts",
     "markets": "tsx src/cli.ts --markets-only",
     "phase1": "tsx src/phase1-cli.ts",
+    "phase1:backfill": "tsx src/bitquery/backfill-cli.ts",
     "ha-feed": "tsx src/ha-feed-cli.ts",
     "vaults": "tsx src/vaults-cli.ts"
   },
   "dependencies": {
     "@phronesis/shared": "workspace:*",
     "@phronesis/x402-client": "workspace:*",
+    "@xenova/transformers": "^2.17.2",
     "ethers": "6.13.1",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.13.1",
+    "redis": "^4.7.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

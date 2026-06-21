@@ -1,12 +1,17 @@
 #!/usr/bin/env node
+import { anchorAuditRecord } from "@phronesis/audit/anchor";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { anchorAuditRecord } from "@phronesis/audit/anchor";
-import type { MarketState } from "@phronesis/shared";
+import type { EncryptedMarketStateBundle, MarketState } from "@phronesis/shared";
+import { env } from "@phronesis/shared";
+import { startAttestationServer } from "./attestation/server.js";
 import { buildRedactedAuditRecord, summarizeIntents } from "./audit/redacted.js";
+import { decryptMarketSnapshot } from "./ingest/decrypt-snapshot.js";
 import { runPaperBacktest, type BacktestFixture } from "./paper/backtest.js";
+import { generateBacktestFromSnapshot } from "./paper/backtest-generator.js";
 import { runCognitiveCycle } from "./pipeline/cognitive.js";
+import { verifyTradeIntentSignature } from "./signing/eip712-intent.js";
 import { loadStrategyConfig } from "./strategy/loader.js";
 
 const args = process.argv.slice(2);
@@ -17,8 +22,18 @@ const useFixture = args.includes("--fixture") || !args.includes("--live");
 const runBacktest = args.includes("--backtest");
 const runPaper = args.includes("--paper");
 const anchor = args.includes("--anchor");
+const useEncrypted = args.includes("--encrypted-strategy");
+const signIntents = args.includes("--sign");
+const attestationServer = args.includes("--attestation-server");
+const backtestFromSnapshot = args.includes("--backtest-snapshot");
 
 function loadSnapshot(): MarketState {
+  const encryptedPath = args.find((a) => a.startsWith("--encrypted-snapshot="))?.split("=")[1];
+  if (encryptedPath) {
+    const bundle = JSON.parse(readFileSync(encryptedPath, "utf8")) as EncryptedMarketStateBundle;
+    return decryptMarketSnapshot(bundle);
+  }
+
   const path = resolve(pkgRoot, "fixtures/market-snapshot.json");
   return JSON.parse(readFileSync(path, "utf8")) as MarketState;
 }
@@ -31,18 +46,33 @@ function loadBacktestFixture(): BacktestFixture {
 async function main() {
   console.log("=== Phronesis Phase 2 — Cognitive Core ===\n");
 
-  const strategy = loadStrategyConfig();
+  if (attestationServer) {
+    startAttestationServer(env.phase2AttestationPort);
+  }
 
-  if (runBacktest) {
-    const fixture = loadBacktestFixture();
-    const questions: Record<string, string> = {
-      "0xfixture001": "Will Bitcoin reach $150k before July 2026?",
-      "0xfixture002": "Will the Fed cut rates in March 2026?",
-      "0xfixture003": "Will Trump win the 2028 Republican nomination?",
-    };
+  const strategy = useEncrypted
+    ? loadStrategyConfig(resolve(pkgRoot, "fixtures/strategy.default.encrypted.json"))
+    : loadStrategyConfig();
+
+  if (runBacktest || backtestFromSnapshot) {
+    const snapshot = loadSnapshot();
+    const fixture = backtestFromSnapshot
+      ? generateBacktestFromSnapshot(snapshot, 30, strategy.nav)
+      : loadBacktestFixture();
+
+    const questions: Record<string, string> = {};
+    for (const m of snapshot.markets) {
+      questions[m.conditionId] = m.question;
+    }
+    for (const day of fixture.days) {
+      for (const id of Object.keys(day.prices)) {
+        if (!questions[id]) questions[id] = id;
+      }
+    }
 
     const report = runPaperBacktest(fixture, strategy, questions);
     console.log("30-day paper backtest report");
+    console.log(`  Source:     ${backtestFromSnapshot ? "snapshot-derived" : "fixture history"}`);
     console.log(`  Period:     ${new Date(report.startTs).toISOString()} → ${new Date(report.endTs).toISOString()}`);
     console.log(`  Initial NAV: $${report.initialNav.toFixed(2)}`);
     console.log(`  Final NAV:   $${report.finalNav.toFixed(2)}`);
@@ -59,18 +89,21 @@ async function main() {
   }
 
   if (!useFixture) {
-    console.warn("[cognitive] --live not implemented yet; use --fixture");
+    console.warn("[cognitive] --live snapshot ingest via daemon; using fixture");
   }
 
   const snapshot = loadSnapshot();
   console.log(`Loaded snapshot v${snapshot.version} with ${snapshot.markets.length} markets`);
-  console.log(`Strategy: NAV=$${strategy.nav} θ=${strategy.kellyTheta} maxPos=${strategy.maxPositionPct}\n`);
+  console.log(
+    `Strategy: NAV=$${strategy.nav} θ=${strategy.kellyTheta} maxPos=${strategy.maxPositionPct} encrypted=${useEncrypted}`,
+  );
 
   const result = await runCognitiveCycle({
     snapshot,
     strategy,
     useLlm,
-    attestationHash: useLlm ? "tee-compute" : "local-rules",
+    signIntents,
+    attestationHash: useLlm ? undefined : "local-rules",
   });
 
   console.log(`Cycle ${result.cycleId} | LLM=${result.llmUsed} | intents=${result.intents.length}`);
@@ -81,8 +114,14 @@ async function main() {
   console.log("\nTrade intents (paper mode):");
   console.log(summarizeIntents(result.intents));
 
+  const signed = result.intents.filter((i) => i.signature);
+  if (signed.length > 0) {
+    const valid = signed.filter((i) => verifyTradeIntentSignature(i)).length;
+    console.log(`\nEIP-712 signatures: ${valid}/${signed.length} verified`);
+  }
+
   if (result.opportunities.length > 0) {
-    console.log("\nRanked opportunities:");
+    console.log("\nRanked opportunities (QP-allocated):");
     for (const o of result.opportunities) {
       console.log(
         `  ${o.side} ${o.question.slice(0, 44)} | $${o.wagerUsd.toFixed(0)} | edge=${o.edge.toFixed(3)} | ${o.thesis.slice(0, 50)}`,

@@ -1,0 +1,21 @@
+{
+  "name": "Phronesis",
+  "tagline": "Autonomous prediction-market fund on 0G",
+  "description": "AI-managed fund that trades Polymarket via TEE-secured strategy. Investors deposit OG, receive PHR shares, and verify performance on-chain.",
+  "investorPath": "/investor",
+  "operatorPath": "/operator",
+  "pillars": [
+    {
+      "title": "For investors",
+      "body": "Connect wallet, deposit testnet OG, receive fractional shares, and track NAV with Merkle-anchored audit roots."
+    },
+    {
+      "title": "For operators",
+      "body": "Monitor fund health, authorize beta testers, review market feed divergence, and manage the autonomous trading cycle."
+    },
+    {
+      "title": "On-chain trust",
+      "body": "PhronesisFund, MemoriaRegistry, and ERC-7857 agent metadata live on 0G. Execution runs on Polygon via policy-gated Safe."
+    }
+  ]
+}

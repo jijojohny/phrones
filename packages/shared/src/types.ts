@@ -71,6 +71,32 @@ export interface SentimentSignal {
   ts: number;
 }
 
+/** Phase 1 feed health metrics for Grafana / Prometheus. */
+export interface FeedHealthMetrics {
+  ts: number;
+  marketCount: number;
+  tickCount: number;
+  missedTicks: number;
+  reconnects: number;
+  gapFills: number;
+  avgLagMs: number;
+  maxLagMs: number;
+  sentimentSource: "lexicon" | "finbert" | "hybrid";
+  redisPublished: boolean;
+  timescalePublished: boolean;
+  kafkaEvents: number;
+}
+
+export interface EncryptedMarketStateBundle {
+  algorithm: "aes-256-gcm";
+  iv: string;
+  authTag: string;
+  ciphertext: string;
+  metadataHash: string;
+  version: number;
+  ts: number;
+}
+
 export interface DivergenceAlert {
   conditionId: string;
   question: string;
@@ -139,6 +165,10 @@ export interface TradeIntent {
   pBlended: number;
   attestationHash: string;
   ts: number;
+  /** EIP-712 signature when TEE signer key configured */
+  signature?: `0x${string}`;
+  signerAddress?: `0x${string}`;
+  intentHash?: `0x${string}`;
 }
 
 export interface CognitiveCycleResult {
@@ -284,7 +314,11 @@ export interface PerformanceReport {
   maxDrawdown: number;
   tradeCount: number;
   lastAuditRoot: string;
+  lastStorageHash?: string;
+  auditVerified?: boolean;
+  auditTs?: number;
   shareSupply: string;
+  investorShares?: string;
   ts: number;
 }
 
@@ -308,6 +342,28 @@ export interface EncryptedMetadataBundle {
   iv: string;
   authTag: string;
   algorithm: "aes-256-gcm";
+}
+
+/** AES-256-GCM encrypted strategy config (TEE boot loader). */
+export interface EncryptedStrategyBundle {
+  algorithm: "aes-256-gcm";
+  iv: string;
+  authTag: string;
+  ciphertext: string;
+  metadataHash: string;
+  version: number;
+  ts: number;
+}
+
+/** TEE attestation quote for external auditors. */
+export interface AttestationQuote {
+  provider: string;
+  quoteHash: string;
+  verified: boolean;
+  mode: "teeml" | "teetls" | "local";
+  ts: number;
+  expiresAt: number;
+  details?: string;
 }
 
 /** EIP-712 cross-chain intent (0G control → Polygon execution). */

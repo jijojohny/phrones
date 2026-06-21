@@ -1,5 +1,6 @@
 import { env } from "@phronesis/shared";
 import type { ExecutionResult, PolymarketOrder } from "@phronesis/shared";
+import { createPolymarketClient } from "./clob-client.js";
 
 export interface ExecuteOptions {
   mode: "dry-run" | "live";
@@ -33,10 +34,22 @@ function dryRunExecute(orders: PolymarketOrder[], cycleId: string): ExecutionRes
 }
 
 async function liveExecute(orders: PolymarketOrder[], cycleId: string): Promise<ExecutionResult> {
-  const hasCreds =
-    env.polymarketApiKey && env.polymarketApiSecret && env.polymarketApiPassphrase;
+  const orderIds: string[] = [];
+  const errors: string[] = [];
 
-  if (!hasCreds) {
+  let client: Awaited<ReturnType<typeof createPolymarketClient>> = null;
+  try {
+    client = await createPolymarketClient();
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : String(err));
+  }
+
+  if (!client) {
+    if (!env.polymarketApiKey) {
+      errors.push(
+        "Live mode requires SESSION_KEY_PRIVATE_KEY + POLYMARKET_API_KEY/SECRET/PASSPHRASE",
+      );
+    }
     return {
       mode: "live",
       cycleId,
@@ -46,20 +59,14 @@ async function liveExecute(orders: PolymarketOrder[], cycleId: string): Promise<
       skipped: orders.length,
       violations: [],
       orderIds: [],
-      errors: [
-        "Live mode requires POLYMARKET_API_KEY, POLYMARKET_API_SECRET, POLYMARKET_API_PASSPHRASE",
-        "Use --dry-run for paper execution or configure API credentials",
-      ],
+      errors,
     };
   }
 
-  const orderIds: string[] = [];
-  const errors: string[] = [];
-
   for (const order of orders) {
     try {
-      const id = await postOrderToClob(order);
-      orderIds.push(id);
+      const result = await client.postLimitOrder(order);
+      orderIds.push(result.orderId);
     } catch (err) {
       errors.push(err instanceof Error ? err.message : String(err));
     }
@@ -76,27 +83,4 @@ async function liveExecute(orders: PolymarketOrder[], cycleId: string): Promise<
     orderIds,
     errors,
   };
-}
-
-/** Placeholder for signed CLOB submission — requires @polymarket/clob-client + session key. */
-async function postOrderToClob(order: PolymarketOrder): Promise<string> {
-  const host = env.polymarketClobHost;
-  const res = await fetch(`${host}/order`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tokenID: order.tokenId,
-      price: order.price,
-      size: order.sizeShares,
-      side: order.side,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`CLOB POST failed (${res.status}): ${body.slice(0, 200)}`);
-  }
-
-  const data = (await res.json()) as { orderID?: string; id?: string };
-  return data.orderID ?? data.id ?? `live-${Date.now()}`;
 }

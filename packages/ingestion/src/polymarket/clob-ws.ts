@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import type { MarketTick } from "@phronesis/shared";
+import { gapFillAssets } from "./clob-rest.js";
 
 const WS_URL = "wss://ws-subscriptions-clob.polymarket.com/ws/market";
 
@@ -9,7 +10,10 @@ export interface ClobWsOptions {
   assetIds: string[];
   onTick: TickHandler;
   onError?: (err: Error) => void;
+  onReconnect?: () => void;
+  onGapFill?: (count: number) => void;
   reconnectMs?: number;
+  gapFillOnReconnect?: boolean;
 }
 
 function parsePrice(value: string | number | undefined): number | undefined {
@@ -27,6 +31,7 @@ export class PolymarketClobWs {
   private ws: WebSocket | null = null;
   private closed = false;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private isFirstConnect = true;
 
   constructor(private readonly options: ClobWsOptions) {}
 
@@ -34,7 +39,7 @@ export class PolymarketClobWs {
     this.closed = false;
     this.ws = new WebSocket(WS_URL);
 
-    this.ws.on("open", () => {
+    this.ws.on("open", async () => {
       const payload = {
         assets_ids: this.options.assetIds,
         type: "market",
@@ -42,6 +47,13 @@ export class PolymarketClobWs {
       };
       this.ws?.send(JSON.stringify(payload));
       console.log(`[clob-ws] subscribed to ${this.options.assetIds.length} assets`);
+
+      if (!this.isFirstConnect && this.options.gapFillOnReconnect !== false) {
+        this.options.onReconnect?.();
+        const count = await gapFillAssets(this.options.assetIds, this.options.onTick);
+        this.options.onGapFill?.(count);
+      }
+      this.isFirstConnect = false;
     });
 
     this.ws.on("message", (raw) => {

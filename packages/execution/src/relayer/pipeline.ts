@@ -1,20 +1,23 @@
-import type { CognitiveCycleResult, RelayerResult, TradeIntent } from "@phronesis/shared";
+import type { CognitiveCycleResult, RelayerResult } from "@phronesis/shared";
 import { validateIntents } from "../policy/validator.js";
 import { loadSessionPolicy, loadTokenMap } from "../config/loader.js";
+import { loadMergedSessionPolicy } from "../policy/on-chain.js";
+import { recordSpend, loadDailySpend } from "../policy/daily-spend.js";
 import { buildOrders } from "../polymarket/order-builder.js";
 import { executeOrders } from "../polymarket/executor.js";
-import { simulateFills, summarizeFills } from "../polymarket/fills.js";
+import { summarizeFills, trackFills } from "../polymarket/fill-tracker.js";
 
 export interface RelayOptions {
   mode: "dry-run" | "live";
   dailySpentUsdc?: number;
+  trackFills?: boolean;
 }
 
 export async function relayIntents(
   cycle: CognitiveCycleResult,
   opts: RelayOptions,
 ): Promise<RelayerResult> {
-  const policy = loadSessionPolicy();
+  const policy = await loadMergedSessionPolicy(loadSessionPolicy);
   const attestationValid = cycle.intents.every(
     (i) => i.attestationHash && i.attestationHash.length > 0,
   );
@@ -38,9 +41,10 @@ export async function relayIntents(
     };
   }
 
+  const spent = opts.dailySpentUsdc ?? loadDailySpend().spentUsdc;
   const policyResult = validateIntents(cycle.intents, {
     policy,
-    dailySpentUsdc: opts.dailySpentUsdc ?? 0,
+    dailySpentUsdc: spent,
   });
 
   const toExecute = policyResult.approvedIntents;
@@ -60,6 +64,11 @@ export async function relayIntents(
   });
   execution.errors.push(...buildErrors);
 
+  if (opts.mode === "live" && execution.submitted > 0) {
+    const totalUsd = orders.reduce((s, o) => s + o.sizeUsd, 0);
+    recordSpend(totalUsd, execution.orderIds);
+  }
+
   if (policyResult.violations.length > 0 && execution.skipped === 0) {
     execution.skipped = cycle.intents.length - execution.submitted;
   }
@@ -71,7 +80,10 @@ export async function relayIntents(
   };
 }
 
-export function formatRelayReport(result: RelayerResult): string {
+export async function formatRelayReport(
+  result: RelayerResult,
+  opts: { trackFills?: boolean } = {},
+): Promise<string> {
   const lines: string[] = [];
   lines.push(`Attestation: ${result.attestationValid ? "OK" : "FAIL"}`);
   lines.push(
@@ -93,9 +105,11 @@ export function formatRelayReport(result: RelayerResult): string {
     lines.push(`  ! ${e}`);
   }
 
-  const fills = simulateFills(ex.orders, ex.orderIds);
-  lines.push("\nFills:");
-  lines.push(summarizeFills(fills));
+  if (opts.trackFills) {
+    const fills = await trackFills(ex, { mode: ex.mode, poll: true });
+    lines.push("\nFills:");
+    lines.push(summarizeFills(fills));
+  }
 
   return lines.join("\n");
 }
@@ -113,5 +127,3 @@ function emptyExecution(cycleId: string, mode: "dry-run" | "live") {
     errors: ["Relay aborted"],
   };
 }
-
-export type { TradeIntent };

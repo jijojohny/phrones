@@ -1,4 +1,5 @@
 import type { Opportunity } from "@phronesis/shared";
+import { parseValidatedOpportunities, validateLlmResponse } from "./schema.js";
 
 interface LlmResponseShape {
   thesis?: string;
@@ -12,6 +13,12 @@ interface LlmResponseShape {
 }
 
 export function parseLlmOpportunities(raw: string): Opportunity[] {
+  const validation = validateLlmResponse(raw);
+  if (validation.ok) {
+    return parseValidatedOpportunities(raw);
+  }
+
+  console.warn("[llm] schema validation warnings:", validation.errors.join("; "));
   const json = extractJson(raw);
   const parsed = JSON.parse(json) as LlmResponseShape;
   const rows = parsed.ranked_opportunities ?? [];

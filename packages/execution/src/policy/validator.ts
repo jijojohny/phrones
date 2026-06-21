@@ -4,6 +4,7 @@ import type {
   SessionKeyPolicy,
   TradeIntent,
 } from "@phronesis/shared";
+import { verifyTradeIntentSignature } from "@phronesis/tee-core/signing";
 
 export interface PolicyContext {
   policy: SessionKeyPolicy;
@@ -101,6 +102,18 @@ function checkIntent(
 
   if (!intent.attestationHash || intent.attestationHash.length < 4) {
     out.push(violation(index, intent.marketRef, "attestation", "Missing TEE attestation hash"));
+  }
+
+  if (intent.signature && !verifyTradeIntentSignature(intent)) {
+    out.push(violation(index, intent.marketRef, "signature", "Invalid EIP-712 intent signature"));
+  }
+
+  if (intent.calldata && intent.calldata.length >= 10 && policy.allowedSelectors.length > 0) {
+    const selector = intent.calldata.slice(0, 10).toLowerCase();
+    const allowed = policy.allowedSelectors.some((s) => s.toLowerCase() === selector);
+    if (!allowed) {
+      out.push(violation(index, intent.marketRef, "allowed_selectors", `Selector ${selector} not allowed`));
+    }
   }
 
   if (intent.ts > now + 60_000) {
