@@ -185,124 +185,173 @@ export function BetaApp() {
     }
   };
 
-  if (!config) return <main><section className="card"><p className="muted">Loading…</p></section></main>;
+  if (!config) {
+    return (
+      <section className="panel">
+        <p className="muted">Loading…</p>
+      </section>
+    );
+  }
 
   const auditMatch =
     report?.lastAuditRoot && audit?.merkleRoot &&
     report.lastAuditRoot.toLowerCase() === audit.merkleRoot.toLowerCase();
 
   return (
-    <main>
-      <header style={{ marginBottom: "1.5rem" }}>
+    <>
+      <header className="page-intro">
         <span className="badge">{config.beta.label}</span>
-        <h1 style={{ margin: "0.5rem 0 0.25rem", fontSize: "1.5rem" }}>Investor portal</h1>
-        <p className="muted" style={{ margin: 0 }}>{config.beta.tagline}</p>
+        <h1>Investor portal</h1>
+        <p>{config.beta.tagline}</p>
       </header>
 
-      <section className="card">
-        <h2 className="section-title">Onboarding</h2>
-        <ol className="steps">
-          {config.beta.onboarding.map((s, i) => (
-            <li key={s.id} className="step">
-              <span className="step-num">{i + 1}</span>
-              <div><strong>{s.title}</strong><p className="muted">{s.description}</p></div>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <div className="panel-stack">
+        <section className="panel">
+          <h2 className="section-title">Onboarding</h2>
+          <ol className="steps">
+            {config.beta.onboarding.map((s, i) => (
+              <li key={s.id} className="step">
+                <span className="step-num">{String(i + 1).padStart(2, "0")}</span>
+                <div>
+                  <strong>{s.title}</strong>
+                  <p>{s.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-      <section className="card">
-        {!address ? (
-          <button type="button" onClick={handleConnect}>Connect wallet</button>
-        ) : (
-          <div className="wallet-bar">
-            <span className="mono">{shortenAddress(address)}</span>
-            {!chainOk && (
-              <button type="button" className="secondary" onClick={handleSwitchNetwork}>
-                Switch to {config.network.name}
-              </button>
-            )}
-            {chainOk && <span className="ok-pill">{config.network.nativeCurrency.symbol} testnet</span>}
-          </div>
-        )}
-        {error && <p className="error">{error}</p>}
-      </section>
-
-      {address && chainOk && authorized === false && config.beta.features.requestAccess && (
-        <section className="card">
-          <h2 className="section-title">Request beta access</h2>
-          <p className="muted">Performance data requires operator authorization.</p>
-          {!accessRequested ? (
-            <>
-              <input type="email" placeholder="Email (optional)" value={accessEmail} onChange={(e) => setAccessEmail(e.target.value)} className="input" />
-              <button type="button" onClick={handleRequestAccess} style={{ marginTop: "0.75rem" }}>Request access</button>
-            </>
+        <section className="panel">
+          <h2 className="section-title">Wallet</h2>
+          {!address ? (
+            <button type="button" className="btn-primary" onClick={handleConnect}>
+              Connect wallet
+            </button>
           ) : (
-            <p className="ok">Request submitted. Operator will authorize your wallet.</p>
+            <div className="wallet-bar">
+              <span className="mono">{shortenAddress(address)}</span>
+              {!chainOk && (
+                <button type="button" className="secondary" onClick={handleSwitchNetwork}>
+                  Switch to {config.network.name}
+                </button>
+              )}
+              {chainOk && <span className="ok-pill">{config.network.nativeCurrency.symbol} testnet</span>}
+            </div>
           )}
-          <button type="button" className="secondary" onClick={refreshAuth} style={{ marginTop: "0.75rem" }}>Check authorization</button>
+          {error && <p className="error">{error}</p>}
         </section>
-      )}
 
-      {address && chainOk && config.fundAddress && config.beta.features.deposit && (
-        <section className="card">
-          <h2 className="section-title">Deposit & redeem</h2>
-          <div className="form-row">
-            <label>Token
-              <select value={depositToken} onChange={(e) => setDepositToken(e.target.value)} className="input">
-                {config.stablecoins.map((t) => (
-                  <option key={t.symbol} value={t.symbol} disabled={!t.native && !t.address}>{t.symbol}{!t.native && !t.address ? " (N/A)" : ""}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="form-row two-col">
-            <label>Deposit amount<input type="text" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="input" /></label>
-            <label>Redeem shares<input type="text" value={redeemShares} onChange={(e) => setRedeemShares(e.target.value)} placeholder="1.0" className="input" /></label>
-          </div>
-          <div className="btn-row">
-            <button type="button" onClick={handleDeposit} disabled={txPending || !depositAmount}>{txPending ? "Confirm in wallet…" : "Deposit"}</button>
-            <button type="button" className="secondary" onClick={handleRedeem} disabled={txPending || !redeemShares}>Redeem</button>
-          </div>
-          {shareBalance !== null && <p className="muted" style={{ marginTop: "1rem" }}>Your shares: <strong>{shareBalance} PHR</strong></p>}
-          {txMessage && <p className="ok">{txMessage}</p>}
-          {config.network.faucetUrl && (
-            <p className="muted" style={{ marginTop: "0.75rem" }}>
-              Need testnet OG? <a href={config.network.faucetUrl} target="_blank" rel="noreferrer">Faucet →</a>
+        {address && chainOk && authorized === false && config.beta.features.requestAccess && (
+          <section className="panel">
+            <h2 className="section-title">Request beta access</h2>
+            <p className="muted">Performance data requires operator authorization.</p>
+            {!accessRequested ? (
+              <>
+                <input
+                  type="email"
+                  placeholder="Your email (optional)"
+                  value={accessEmail}
+                  onChange={(e) => setAccessEmail(e.target.value)}
+                  className="input"
+                />
+                <div className="btn-row">
+                  <button type="button" onClick={handleRequestAccess}>Request access</button>
+                </div>
+              </>
+            ) : (
+              <p className="ok">Request submitted. Operator will authorize your wallet.</p>
+            )}
+            <button type="button" className="secondary" onClick={refreshAuth} style={{ marginTop: "0.75rem" }}>
+              Check authorization
+            </button>
+          </section>
+        )}
+
+        {address && chainOk && config.fundAddress && config.beta.features.deposit && (
+          <section className="panel">
+            <h2 className="section-title">Deposit & redeem</h2>
+            <div className="form-row">
+              <label>
+                Token
+                <select value={depositToken} onChange={(e) => setDepositToken(e.target.value)} className="input">
+                  {config.stablecoins.map((t) => (
+                    <option key={t.symbol} value={t.symbol} disabled={!t.native && !t.address}>
+                      {t.symbol}{!t.native && !t.address ? " (N/A)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="form-row two-col">
+              <label>
+                Deposit amount
+                <input type="text" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="input" />
+              </label>
+              <label>
+                Redeem shares
+                <input type="text" value={redeemShares} onChange={(e) => setRedeemShares(e.target.value)} placeholder="1.0" className="input" />
+              </label>
+            </div>
+            <div className="btn-row">
+              <button type="button" onClick={handleDeposit} disabled={txPending || !depositAmount}>
+                {txPending ? "Confirm in wallet…" : "Deposit"}
+              </button>
+              <button type="button" className="secondary" onClick={handleRedeem} disabled={txPending || !redeemShares}>
+                Redeem
+              </button>
+            </div>
+            {shareBalance !== null && (
+              <p className="muted" style={{ marginTop: "1rem" }}>
+                Your shares: <strong>{shareBalance} PHR</strong>
+              </p>
+            )}
+            {txMessage && <p className="ok">{txMessage}</p>}
+            {config.network.faucetUrl && (
+              <p className="muted" style={{ marginTop: "0.75rem" }}>
+                Need testnet OG? <a href={config.network.faucetUrl} target="_blank" rel="noreferrer">Faucet →</a>
+              </p>
+            )}
+          </section>
+        )}
+
+        {authorized && report && (
+          <section className="panel">
+            <div className="section-header">
+              <h2 className="section-title" style={{ margin: 0 }}>Performance</h2>
+              <button type="button" className="secondary" onClick={loadPerformance} disabled={loading}>
+                {loading ? "Loading…" : "Refresh"}
+              </button>
+            </div>
+            <div className="grid">
+              <div className="metric"><span>NAV</span><strong>${report.nav.toLocaleString()}</strong></div>
+              <div className="metric"><span>NAV / share</span><strong>{report.navPerShare.toFixed(4)} OG</strong></div>
+              <div className="metric"><span>30d PnL</span><strong>{(report.pnl30d * 100).toFixed(2)}%</strong></div>
+              <div className="metric"><span>Sharpe</span><strong>{report.sharpe.toFixed(2)}</strong></div>
+              <div className="metric"><span>Max drawdown</span><strong>{(report.maxDrawdown * 100).toFixed(1)}%</strong></div>
+              <div className="metric">
+                <span>Audit</span>
+                <strong className={report.auditVerified ? "ok" : ""}>{report.auditVerified ? "Verified" : "Pending"}</strong>
+              </div>
+            </div>
+            <p className="beta-note">Beta: PnL/Sharpe may be stubbed until live trading feeds in.</p>
+          </section>
+        )}
+
+        {audit && (
+          <section className="panel">
+            <h2 className="section-title">Memoria audit root</h2>
+            <p className="mono break-all">{audit.merkleRoot}</p>
+            <p className="muted">
+              Anchored {new Date(audit.ts).toLocaleString()}
+              {auditMatch !== undefined && <> · Match: {auditMatch ? "✓" : "—"}</>}
             </p>
-          )}
-        </section>
-      )}
+          </section>
+        )}
 
-      {authorized && report && (
-        <section className="card">
-          <div className="section-header">
-            <h2 className="section-title" style={{ margin: 0 }}>Performance</h2>
-            <button type="button" className="secondary" onClick={loadPerformance} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button>
-          </div>
-          <div className="grid">
-            <div className="metric"><span>NAV</span><strong>${report.nav.toLocaleString()}</strong></div>
-            <div className="metric"><span>NAV / share</span><strong>{report.navPerShare.toFixed(4)} OG</strong></div>
-            <div className="metric"><span>30d PnL</span><strong>{(report.pnl30d * 100).toFixed(2)}%</strong></div>
-            <div className="metric"><span>Sharpe</span><strong>{report.sharpe.toFixed(2)}</strong></div>
-            <div className="metric"><span>Max drawdown</span><strong>{(report.maxDrawdown * 100).toFixed(1)}%</strong></div>
-            <div className="metric"><span>Audit</span><strong className={report.auditVerified ? "ok" : ""}>{report.auditVerified ? "Yes" : "No"}</strong></div>
-          </div>
-          <p className="beta-note muted">Beta: PnL/Sharpe may be stubbed until live trading feeds in.</p>
+        <section className="panel-muted">
+          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>{config.beta.disclaimer}</p>
         </section>
-      )}
-
-      {audit && (
-        <section className="card">
-          <h2 className="section-title">Memoria audit root</h2>
-          <p className="mono break-all">{audit.merkleRoot}</p>
-          <p className="muted">Anchored {new Date(audit.ts).toLocaleString()}{auditMatch !== undefined && <> · Match: {auditMatch ? "✓" : "—"}</>}</p>
-        </section>
-      )}
-
-      <section className="card muted-card">
-        <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>{config.beta.disclaimer}</p>
-      </section>
-    </main>
+      </div>
+    </>
   );
 }
