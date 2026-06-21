@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p ${PRODUCT_PORT:-3000}",
-    "build": "next build",
+    "build": "pnpm --filter @phronesis/shared build && next build",
     "start": "next start -p ${PRODUCT_PORT:-3000}",
     "typecheck": "tsc --noEmit"
   },
