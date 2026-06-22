@@ -8,9 +8,10 @@ export async function GET() {
   const network = loadNetwork() as Record<string, unknown>;
   const product = loadProduct();
   const chainId = Number(process.env.OG_CHAIN_ID || network.chainId || "16602");
+  const fundAddress = process.env.PHRONESIS_FUND_ADDRESS || "";
 
   return NextResponse.json({
-    fundAddress: process.env.PHRONESIS_FUND_ADDRESS || "",
+    fundAddress,
     shareAddress: process.env.PHRONESIS_SHARE_ADDRESS || "",
     oracleAddress: process.env.PHRONESIS_ORACLE_ADDRESS || "",
     memoriaRegistry: process.env.MEMORIA_REGISTRY_ADDRESS || "",
@@ -28,6 +29,11 @@ export async function GET() {
       rpcUrls: [rpcUrl, ...((network.rpcUrls as string[]) ?? []).filter((u) => u !== rpcUrl)],
     },
     beta: loadBeta(),
+    setup: {
+      fundConfigured: Boolean(fundAddress),
+      shareConfigured: Boolean(process.env.PHRONESIS_SHARE_ADDRESS),
+      rpcConfigured: Boolean(process.env.OG_RPC_URL),
+    },
     product: product ?? {
       name: "Phronesis",
       tagline: "Autonomous prediction-market fund",

@@ -23,6 +23,7 @@ export interface PortalConfig {
   network: OgNetwork;
   beta: BetaConfig;
   product: ProductConfig;
+  setup?: { fundConfigured: boolean; shareConfigured: boolean; rpcConfigured: boolean };
 }
 
 export interface BetaConfig {
@@ -120,6 +121,17 @@ export async function connectWallet(): Promise<string> {
   const address = accounts[0];
   if (!address) throw new Error("No account returned from wallet");
   return address;
+}
+
+export async function restoreWalletSession(): Promise<string | null> {
+  const provider = getProvider();
+  if (!provider) return null;
+  try {
+    const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+    return accounts[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getChainId(provider = getProvider()): Promise<number> {

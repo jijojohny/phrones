@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "label": "Galileo Testnet Beta",
+  "tagline": "Deposit testnet OG. Own fractional shares in an autonomous prediction-market fund.",
+  "minDepositOg": "0.01",
+  "defaultDepositOg": "0.1",
+  "disclaimer": "Beta on 0G Galileo testnet only. Not investment advice. Test funds may be lost. No mainnet deposits.",
+  "networkKey": "0g-galileo",
+  "supportEmail": "beta@phronesis.local",
+  "features": {
+    "deposit": true,
+    "redeem": true,
+    "performance": true,
+    "requestAccess": true
+  },
+  "onboarding": [
+    { "id": "connect", "title": "Connect wallet", "description": "MetaMask, Rabby, 0G Wallet, or any EIP-1193 wallet" },
+    { "id": "network", "title": "Switch to 0G Galileo", "description": "Chain ID 16602 — testnet only" },
+    { "id": "access", "title": "Beta access", "description": "Request access — operator authorizes your address for performance data" },
+    { "id": "deposit", "title": "Deposit & own shares", "description": "Send native OG to mint PHR shares pro-rata NAV" },
+    { "id": "dashboard", "title": "Track performance", "description": "NAV, audit roots, and share balance" }
+  ]
+}

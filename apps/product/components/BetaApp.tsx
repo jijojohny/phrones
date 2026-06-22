@@ -13,6 +13,7 @@ import {
   formatWalletError,
   getChainId,
   isOnTargetChain,
+  restoreWalletSession,
   shortenAddress,
   switchToNetwork,
   watchWallet,
@@ -56,6 +57,10 @@ export function BetaApp() {
       .then((r) => (r.ok ? r.json() : null))
       .then((a) => a && setAudit(a as AuditEntry))
       .catch(() => {});
+
+    restoreWalletSession().then((existing) => {
+      if (existing) setAddress(existing);
+    });
   }, []);
 
   const refreshChain = useCallback(async () => {
@@ -75,8 +80,14 @@ export function BetaApp() {
 
   const refreshAuth = useCallback(async () => {
     if (!address) return;
-    const res = await fetch(`/api/auth?address=${address}`);
-    if (res.ok) setAuthorized(((await res.json()) as { authorized: boolean }).authorized);
+    try {
+      const res = await fetch(`/api/auth?address=${address}`);
+      const body = (await res.json()) as { authorized?: boolean };
+      if (res.ok) setAuthorized(body.authorized === true);
+      else setAuthorized(false);
+    } catch {
+      setAuthorized(false);
+    }
   }, [address]);
 
   const refreshShares = useCallback(async () => {
@@ -231,6 +242,32 @@ export function BetaApp() {
     report?.lastAuditRoot && audit?.merkleRoot &&
     report.lastAuditRoot.toLowerCase() === audit.merkleRoot.toLowerCase();
 
+  const onboardingSteps = config.beta.onboarding ?? [];
+  const needsAccess = authorized !== true;
+  const canDeposit = Boolean(config.fundAddress) && config.beta.features.deposit;
+  const fundReady = config.setup?.fundConfigured ?? Boolean(config.fundAddress);
+
+  function stepClass(id: string): string {
+    if (id === "connect") return address ? "done" : "active";
+    if (id === "network") {
+      if (!address) return "";
+      return chainOk ? "done" : "active";
+    }
+    if (id === "access") {
+      if (!address || !chainOk) return "";
+      return authorized ? "done" : "active";
+    }
+    if (id === "deposit") {
+      if (!address || !chainOk) return "";
+      return shareBalance && shareBalance !== "0" ? "done" : canDeposit ? "active" : "";
+    }
+    if (id === "dashboard") {
+      if (!address || !chainOk || !authorized) return "";
+      return report ? "done" : "active";
+    }
+    return "";
+  }
+
   return (
     <>
       <header className="page-intro">
@@ -242,18 +279,50 @@ export function BetaApp() {
       <div className="panel-stack">
         <section className="panel">
           <h2 className="section-title">Onboarding</h2>
-          <ol className="steps">
-            {config.beta.onboarding.map((s, i) => (
-              <li key={s.id} className="step">
-                <span className="step-num">{String(i + 1).padStart(2, "0")}</span>
-                <div>
-                  <strong>{s.title}</strong>
-                  <p>{s.description}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          {onboardingSteps.length === 0 ? (
+            <p className="muted">Connect wallet → switch to 0G Galileo (16602) → deposit OG → track shares.</p>
+          ) : (
+            <ol className="steps">
+              {onboardingSteps.map((s, i) => (
+                <li key={s.id} className={`step ${stepClass(s.id)}`}>
+                  <span className="step-num">{String(i + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{s.title}</strong>
+                    <p>{s.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
+
+        {address && chainOk && (
+          <section className="panel">
+            <h2 className="section-title">Next step</h2>
+            {!fundReady && (
+              <p className="warn">
+                Fund contract is not configured on this deployment. Set <code className="mono">PHRONESIS_FUND_ADDRESS</code> in Vercel env vars to enable deposits.
+              </p>
+            )}
+            {fundReady && needsAccess && config.beta.features.requestAccess && !accessRequested && (
+              <p className="muted">Request beta access below so the operator can authorize performance data. You can still deposit OG once the fund is live.</p>
+            )}
+            {fundReady && needsAccess && accessRequested && (
+              <p className="ok">Access requested — waiting for operator authorization. Deposits are available below.</p>
+            )}
+            {fundReady && authorized && !report && (
+              <p className="muted">You are authorized. Loading performance data…</p>
+            )}
+            {fundReady && authorized && report && (
+              <p className="ok">You are set up. Review performance below or deposit more OG.</p>
+            )}
+            {fundReady && canDeposit && (
+              <div className="btn-row" style={{ marginTop: "1rem" }}>
+                <a href="#deposit" className="btn-primary">Go to deposit</a>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="panel">
           <h2 className="section-title">Wallet</h2>
@@ -280,10 +349,10 @@ export function BetaApp() {
           {error && <p className="error">{error}</p>}
         </section>
 
-        {address && chainOk && authorized === false && config.beta.features.requestAccess && (
+        {address && chainOk && needsAccess && config.beta.features.requestAccess && (
           <section className="panel">
             <h2 className="section-title">Request beta access</h2>
-            <p className="muted">Performance data requires operator authorization.</p>
+            <p className="muted">Performance data requires operator authorization. Deposits work without it.</p>
             {!accessRequested ? (
               <>
                 <input
@@ -306,9 +375,15 @@ export function BetaApp() {
           </section>
         )}
 
-        {address && chainOk && config.fundAddress && config.beta.features.deposit && (
-          <section className="panel">
+        {address && chainOk && config.beta.features.deposit && (
+          <section className="panel" id="deposit">
             <h2 className="section-title">Deposit & redeem</h2>
+            {!canDeposit ? (
+              <p className="warn">
+                Deposits are disabled until the fund contract is configured. Add <code className="mono">PHRONESIS_FUND_ADDRESS</code> to your deployment environment.
+              </p>
+            ) : (
+              <>
             <div className="form-row">
               <label>
                 Token
@@ -349,6 +424,8 @@ export function BetaApp() {
               <p className="muted" style={{ marginTop: "0.75rem" }}>
                 Need testnet OG? <a href={config.network.faucetUrl} target="_blank" rel="noreferrer">Faucet →</a>
               </p>
+            )}
+              </>
             )}
           </section>
         )}

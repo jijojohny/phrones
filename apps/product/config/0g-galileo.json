@@ -1,0 +1,9 @@
+{
+  "chainId": 16602,
+  "chainIdHex": "0x40da",
+  "name": "0G Galileo Testnet",
+  "nativeCurrency": { "name": "0G", "symbol": "OG", "decimals": 18 },
+  "rpcUrls": ["https://evmrpc-testnet.0g.ai"],
+  "blockExplorerUrls": ["https://chainscan-galileo.0g.ai"],
+  "faucetUrl": "https://faucet.0g.ai"
+}

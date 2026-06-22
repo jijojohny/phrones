@@ -1,10 +1,46 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-export const REPO_ROOT = resolve(process.cwd(), "../..");
+const APP_ROOT = process.cwd();
+export const REPO_ROOT = findRepoRoot();
+
+function findRepoRoot(): string {
+  const candidates = [
+    resolve(APP_ROOT, "../.."),
+    resolve(APP_ROOT, ".."),
+    APP_ROOT,
+  ];
+  for (const root of candidates) {
+    if (existsSync(resolve(root, "config/beta.json"))) return root;
+  }
+  return resolve(APP_ROOT, "../..");
+}
+
+function readConfigJson<T>(filename: string): T {
+  const candidates = [
+    resolve(APP_ROOT, "config", filename),
+    resolve(REPO_ROOT, "config", filename),
+    resolve(REPO_ROOT, "config/networks", filename),
+  ];
+  for (const path of candidates) {
+    if (existsSync(path)) {
+      return JSON.parse(readFileSync(path, "utf8")) as T;
+    }
+  }
+  throw new Error(`Config not found: ${filename}`);
+}
 
 export function readRepoJson<T>(relativePath: string): T {
-  return JSON.parse(readFileSync(resolve(REPO_ROOT, relativePath), "utf8")) as T;
+  const candidates = [
+    resolve(APP_ROOT, relativePath),
+    resolve(REPO_ROOT, relativePath),
+  ];
+  for (const path of candidates) {
+    if (existsSync(path)) {
+      return JSON.parse(readFileSync(path, "utf8")) as T;
+    }
+  }
+  throw new Error(`Config not found: ${relativePath}`);
 }
 
 export function readBetaRequests(): Array<{
@@ -23,9 +59,9 @@ export function readBetaRequests(): Array<{
 
 export function loadStablecoins() {
   try {
-    const registry = readRepoJson<
+    const registry = readConfigJson<
       Record<string, Record<string, Record<string, { symbol: string; decimals: number; address?: string; native?: boolean; env?: string }>>>
-    >("config/stablecoins.json");
+    >("stablecoins.json");
     const chainId = String(process.env.OG_CHAIN_ID || "16602");
     const entries = registry["0G"]?.[chainId] ?? {};
     return Object.values(entries).map((entry) => ({
@@ -41,7 +77,7 @@ export function loadStablecoins() {
 
 export function loadNetwork() {
   try {
-    return readRepoJson("config/networks/0g-galileo.json");
+    return readConfigJson("0g-galileo.json");
   } catch {
     return {
       chainId: 16602,
@@ -57,9 +93,23 @@ export function loadNetwork() {
 
 export function loadBeta() {
   try {
-    return readRepoJson("config/beta.json");
+    return readConfigJson("beta.json");
   } catch {
-    return { version: "0.1.0", label: "Beta", tagline: "", minDepositOg: "0.01", defaultDepositOg: "0.1", disclaimer: "", supportEmail: "", features: {}, onboarding: [] };
+    return {
+      version: "0.1.0",
+      label: "Galileo Testnet Beta",
+      tagline: "Deposit testnet OG. Own fractional shares in an autonomous prediction-market fund.",
+      minDepositOg: "0.01",
+      defaultDepositOg: "0.1",
+      disclaimer: "Beta on 0G Galileo testnet only. Not investment advice.",
+      supportEmail: "",
+      features: { deposit: true, redeem: true, performance: true, requestAccess: true },
+      onboarding: [
+        { id: "connect", title: "Connect wallet", description: "MetaMask, Rabby, 0G Wallet" },
+        { id: "network", title: "Switch to 0G Galileo", description: "Chain ID 16602" },
+        { id: "deposit", title: "Deposit & own shares", description: "Send OG to mint PHR shares" },
+      ],
+    };
   }
 }
 
