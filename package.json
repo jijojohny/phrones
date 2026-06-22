@@ -6,11 +6,6 @@
   "engines": {
     "node": ">=22"
   },
-  "pnpm": {
-    "overrides": {
-      "ethers": "6.13.1"
-    }
-  },
   "scripts": {
     "setup:verify": "bash scripts/setup/verify-step1.sh",
     "setup:wallets": "bash scripts/setup/generate-wallets.sh",
