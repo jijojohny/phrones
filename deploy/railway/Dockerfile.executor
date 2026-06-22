@@ -6,20 +6,19 @@ WORKDIR /app
 # Pin pnpm — corepack default (v11) ignores package.json pnpm.overrides and breaks frozen lockfile
 RUN corepack enable && corepack prepare pnpm@10.33.3 --activate
 
-COPY deploy/railway/.npmrc .npmrc
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/audit/package.json packages/audit/
 COPY packages/tokenization/package.json packages/tokenization/
 
-RUN pnpm install --filter @phronesis/tokenization...
+RUN pnpm install --filter @phronesis/shared --filter @phronesis/audit --filter @phronesis/tokenization...
 
 COPY packages/shared packages/shared
 COPY packages/audit packages/audit
 COPY packages/tokenization packages/tokenization
 COPY config config
 
-RUN pnpm --filter @phronesis/shared build && pnpm --filter @phronesis/tokenization build
+RUN pnpm --filter @phronesis/shared build && pnpm --filter @phronesis/audit build && pnpm --filter @phronesis/tokenization build
 
 ENV NODE_ENV=production
 
