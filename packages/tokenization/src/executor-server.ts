@@ -4,7 +4,12 @@ import { env } from "@phronesis/shared";
 import { fetchLatestAudit, verifyAuditRoot } from "./audit.js";
 import { buildPerformanceReport } from "./performance.js";
 
-export function startExecutorServer(port = env.sealedExecutorPort): void {
+function resolveExecutorPort(): number {
+  if (process.env.PORT) return Number(process.env.PORT);
+  return env.sealedExecutorPort;
+}
+
+export function startExecutorServer(port = resolveExecutorPort()): void {
   const server = createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");

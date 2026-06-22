@@ -1,0 +1,30 @@
+# Railway — sealed executor (performance + audit API for Vercel frontend)
+FROM node:22-slim
+
+WORKDIR /app
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/shared/package.json packages/shared/
+COPY packages/audit/package.json packages/audit/
+COPY packages/tokenization/package.json packages/tokenization/
+
+RUN pnpm install --filter @phronesis/tokenization... --frozen-lockfile || pnpm install --filter @phronesis/tokenization...
+
+COPY packages/shared packages/shared
+COPY packages/audit packages/audit
+COPY packages/tokenization packages/tokenization
+COPY config config
+
+RUN pnpm --filter @phronesis/shared build && pnpm --filter @phronesis/tokenization build
+
+ENV NODE_ENV=production
+
+# Railway injects PORT at runtime
+EXPOSE 8787
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 8787) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["node", "packages/tokenization/dist/executor-server.js"]
