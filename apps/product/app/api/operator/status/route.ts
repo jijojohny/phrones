@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { NextResponse } from "next/server";
 import { Contract, JsonRpcProvider, formatEther } from "ethers";
 import type { MarketState, VaultMetrics } from "@phronesis/shared";
-import { readBetaRequests, REPO_ROOT } from "@/lib/config-server";
+import { REPO_ROOT } from "@/lib/config-server";
+import { readBetaRequests } from "@/lib/beta-store";
 import type { OperatorStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ function loadPreflight() {
     { label: "Deployer key", ok: !!process.env.DEPLOYER_PRIVATE_KEY_TESTNET, required: true, detail: "set" },
     { label: "Fund deployed", ok: !!process.env.PHRONESIS_FUND_ADDRESS, required: true, detail: process.env.PHRONESIS_FUND_ADDRESS || "missing" },
     { label: "Registry deployed", ok: !!process.env.MEMORIA_REGISTRY_ADDRESS, required: true, detail: process.env.MEMORIA_REGISTRY_ADDRESS || "missing" },
-    { label: "Compute provider", ok: !!process.env.OG_COMPUTE_PROVIDER, required: false, detail: process.env.OG_COMPUTE_PROVIDER || "optional" },
+    { label: "Database", ok: !!process.env.DATABASE_URL, required: false, detail: process.env.DATABASE_URL ? "postgres" : "file (ephemeral on Vercel)" },
   ];
   return { passed: checks.filter((c) => c.required && !c.ok).length === 0, checks };
 }
@@ -74,7 +75,7 @@ function loadCompliance() {
 
 export async function GET() {
   const snapshot = loadMarkets();
-  const betaRequests = readBetaRequests().slice(-20).reverse();
+  const betaRequests = await readBetaRequests(20);
 
   let nav = envNum("FUND_NAV", 10000);
   let navPerShare = 1;

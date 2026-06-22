@@ -1,7 +1,5 @@
-import { appendFileSync, mkdirSync } from "node:fs";
-import { resolve } from "node:path";
 import { NextResponse } from "next/server";
-import { REPO_ROOT } from "@/lib/config-server";
+import { appendBetaRequest, persistenceMode } from "@/lib/beta-store";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +23,13 @@ export async function POST(req: Request) {
     ts: new Date().toISOString(),
   };
 
-  const dir = resolve(REPO_ROOT, "data");
-  mkdirSync(dir, { recursive: true });
-  appendFileSync(resolve(dir, "beta-access-requests.jsonl"), `${JSON.stringify(entry)}\n`);
-
-  return NextResponse.json({ ok: true });
+  try {
+    await appendBetaRequest(entry);
+    return NextResponse.json({ ok: true, storage: persistenceMode() });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to save request" },
+      { status: 500 },
+    );
+  }
 }

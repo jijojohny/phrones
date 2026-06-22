@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadBeta, loadNetwork, loadProduct, loadStablecoins } from "@/lib/config-server";
+import { persistenceMode } from "@/lib/beta-store";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export async function GET() {
       fundConfigured: Boolean(fundAddress),
       shareConfigured: Boolean(process.env.PHRONESIS_SHARE_ADDRESS),
       rpcConfigured: Boolean(process.env.OG_RPC_URL),
+      persistence: persistenceMode(),
     },
     product: product ?? {
       name: "Phronesis",

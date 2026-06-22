@@ -43,20 +43,6 @@ export function readRepoJson<T>(relativePath: string): T {
   throw new Error(`Config not found: ${relativePath}`);
 }
 
-export function readBetaRequests(): Array<{
-  address: string;
-  email: string | null;
-  note: string | null;
-  ts: string;
-}> {
-  const file = resolve(REPO_ROOT, "data/beta-access-requests.jsonl");
-  if (!existsSync(file)) return [];
-  return readFileSync(file, "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as { address: string; email: string | null; note: string | null; ts: string });
-}
-
 export function loadStablecoins() {
   try {
     const registry = readConfigJson<
