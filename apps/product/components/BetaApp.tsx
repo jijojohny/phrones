@@ -10,9 +10,12 @@ import {
 } from "@/lib/fund-actions";
 import {
   connectWallet,
+  formatWalletError,
   getChainId,
+  isOnTargetChain,
   shortenAddress,
   switchToNetwork,
+  watchWallet,
   type PortalConfig,
 } from "@/lib/wallet";
 
@@ -39,6 +42,7 @@ export function BetaApp() {
   const [redeemShares, setRedeemShares] = useState("");
   const [txPending, setTxPending] = useState(false);
   const [txMessage, setTxMessage] = useState("");
+  const [walletChainId, setWalletChainId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/config")
@@ -57,10 +61,13 @@ export function BetaApp() {
   const refreshChain = useCallback(async () => {
     if (!config) return false;
     try {
-      const ok = (await getChainId()) === config.chainId;
+      const current = await getChainId();
+      setWalletChainId(current);
+      const ok = isOnTargetChain(current, config.chainId);
       setChainOk(ok);
       return ok;
     } catch {
+      setWalletChainId(null);
       setChainOk(false);
       return false;
     }
@@ -88,12 +95,26 @@ export function BetaApp() {
       setReport((await res.json()) as PerformanceReport);
       await refreshShares();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatWalletError(err));
       setReport(null);
     } finally {
       setLoading(false);
     }
   }, [address, refreshShares]);
+
+  useEffect(() => {
+    if (!address) return;
+    return watchWallet(
+      (accounts) => {
+        if (accounts[0]) setAddress(accounts[0]);
+        else setAddress(null);
+      },
+      (chainId) => {
+        setWalletChainId(chainId);
+        if (config) setChainOk(isOnTargetChain(chainId, config.chainId));
+      },
+    );
+  }, [address, config]);
 
   useEffect(() => {
     if (address) {
@@ -110,9 +131,22 @@ export function BetaApp() {
   const handleConnect = async () => {
     setError(null);
     try {
-      setAddress(await connectWallet());
+      const connected = await connectWallet();
+      setAddress(connected);
+      if (config) {
+        const current = await getChainId();
+        setWalletChainId(current);
+        if (!isOnTargetChain(current, config.chainId)) {
+          await switchToNetwork(config.network, config.rpcUrl);
+          const after = await getChainId();
+          setWalletChainId(after);
+          setChainOk(isOnTargetChain(after, config.chainId));
+        } else {
+          setChainOk(true);
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatWalletError(err));
     }
   };
 
@@ -123,7 +157,7 @@ export function BetaApp() {
       await switchToNetwork(config.network, config.rpcUrl);
       await refreshChain();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatWalletError(err));
     }
   };
 
@@ -139,7 +173,7 @@ export function BetaApp() {
       if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? "Request failed");
       setAccessRequested(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatWalletError(err));
     }
   };
 
@@ -158,7 +192,7 @@ export function BetaApp() {
       await refreshShares();
       if (authorized) await loadPerformance();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatWalletError(err));
     } finally {
       setTxPending(false);
     }
@@ -179,7 +213,7 @@ export function BetaApp() {
       await refreshShares();
       if (authorized) await loadPerformance();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatWalletError(err));
     } finally {
       setTxPending(false);
     }
@@ -237,6 +271,11 @@ export function BetaApp() {
               )}
               {chainOk && <span className="ok-pill">{config.network.nativeCurrency.symbol} testnet</span>}
             </div>
+          )}
+          {address && !chainOk && walletChainId !== null && (
+            <p className="muted" style={{ marginTop: "0.75rem", fontSize: "0.8rem" }}>
+              Wallet on chain {walletChainId} — need {config.chainId} ({config.network.name})
+            </p>
           )}
           {error && <p className="error">{error}</p>}
         </section>
